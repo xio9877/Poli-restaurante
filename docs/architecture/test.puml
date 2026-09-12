@@ -1,0 +1,15 @@
+@startuml
+
+class Usuario {
+    +id : UUID
+    +nombre : String
+}
+
+class Pedido {
+    +id : UUID
+    +estado : String
+}
+
+Usuario "1" --> "*" Pedido
+
+@enduml

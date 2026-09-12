@@ -1,0 +1,701 @@
+@startuml PoliRestaurant_Arquitectura
+
+title PoliRestaurant - Diagrama de Clases de Arquitectura
+
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype polyline
+
+' =========================================================
+' DATABASE
+' =========================================================
+
+package "Database" {
+
+    class AuthUser <<Database>> {
+        +id : UUID
+    }
+
+    class User <<Database>> {
+        +id : UUID
+        +name : String
+        +username : String
+        +role : UserRole
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+    }
+
+    class Customer <<Database>> {
+        +id : UUID
+        +name : String
+        +username : String
+        +phone : String
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+    }
+
+    class CustomerAddress <<Database>> {
+        +id : Integer
+        +customerId : UUID
+        +label : String
+        +address : String
+        +additionalInfo : String
+        +createdAt : Timestamp
+    }
+
+    class RestaurantTable <<Database>> {
+        +id : Integer
+        +name : String
+        +description : String
+        +state : TableStatus
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+    }
+
+    class Category <<Database>> {
+        +id : Integer
+        +name : String
+        +description : String
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+    }
+
+    class Product <<Database>> {
+        +id : Integer
+        +categoryId : Integer
+        +name : String
+        +description : String
+        +price : Decimal
+        +status : ProductStatus
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+    }
+
+    class Order <<Database>> {
+        +id : Integer
+        +status : OrderStatus
+        +subtotal : Decimal
+        +taxRate : Decimal
+        +taxAmount : Decimal
+        +discount : Decimal
+        +total : Decimal
+        +notes : String
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+        +completedAt : Timestamp
+        +canceledAt : Timestamp
+    }
+
+    class DineInOrder <<Database>> {
+        +orderId : Integer
+        +tableId : Integer
+        +waiterId : UUID
+        +guestCount : Integer
+    }
+
+    class DeliveryOrder <<Database>> {
+        +orderId : Integer
+        +customerId : UUID
+        +addressId : Integer
+        +domiciliaryId : UUID
+        +status : DeliveryStatus
+        +deliveryFee : Decimal
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+        +deliveredAt : Timestamp
+    }
+
+    class OrderDetail <<Database>> {
+        +id : Integer
+        +orderId : Integer
+        +productId : Integer
+        +amount : Integer
+        +unitPrice : Decimal
+        +notes : String
+        +state : OrderDetailStatus
+        +createdAt : Timestamp
+        +updatedAt : Timestamp
+        +completedAt : Timestamp
+        +canceledAt : Timestamp
+    }
+
+    class OrderStateHistory <<Database>> {
+        +id : Integer
+        +orderId : Integer
+        +userId : UUID
+        +notes : String
+        +oldState : OrderStatus
+        +newState : OrderStatus
+        +createdAt : Timestamp
+    }
+
+    class OrderDetailStateHistory <<Database>> {
+        +id : Integer
+        +orderDetailId : Integer
+        +userId : UUID
+        +notes : String
+        +oldState : OrderDetailStatus
+        +newState : OrderDetailStatus
+        +createdAt : Timestamp
+    }
+
+    class Invoice <<Database>> {
+        +id : Integer
+        +orderId : Integer
+        +cashierId : UUID
+        +subtotal : Decimal
+        +taxRate : Decimal
+        +taxAmount : Decimal
+        +total : Decimal
+        +status : InvoiceStatus
+        +issuedAt : Timestamp
+        +createdAt : Timestamp
+    }
+
+    class Payment <<Database>> {
+        +invoiceId : Integer
+        +amount : Decimal
+        +method : PaymentMethod
+        +status : PaymentStatus
+        +notes : String
+        +paidAt : Timestamp
+        +createdAt : Timestamp
+    }
+
+
+    enum UserRole {
+        admin
+        waiter
+        kitchen
+        cashier
+        domiciliary
+    }
+
+    enum TableStatus {
+        available
+        unavailable
+    }
+
+    enum ProductStatus {
+        available
+        unavailable
+    }
+
+    enum OrderStatus {
+        open
+        in_preparation
+        ready
+        served
+        canceled
+    }
+
+    enum OrderDetailStatus {
+        pending
+        in_preparation
+        ready
+        served
+        canceled
+    }
+
+    enum DeliveryStatus {
+        pending
+        assigned
+        picked_up
+        delivered
+        canceled
+    }
+
+    enum InvoiceStatus {
+        draft
+        issued
+        canceled
+    }
+
+    enum PaymentMethod {
+        cash
+        debit_card
+        credit_card
+        transfer
+        other
+    }
+
+    enum PaymentStatus {
+        pending
+        completed
+        failed
+        refunded
+    }
+}
+
+
+' =========================================================
+' DAO
+' =========================================================
+
+package "DAO" {
+
+    interface UserDAO {
+        +findById(id : UUID) : User
+        +findAll() : List<User>
+        +save(user : User) : User
+        +update(user : User) : User
+        +delete(id : UUID) : Boolean
+    }
+
+    interface CustomerDAO {
+        +findById(id : UUID) : Customer
+        +findAll() : List<Customer>
+        +save(customer : Customer) : Customer
+        +update(customer : Customer) : Customer
+    }
+
+    interface CustomerAddressDAO {
+        +findById(id : Integer) : CustomerAddress
+        +findByCustomer(customerId : UUID) : List<CustomerAddress>
+        +save(address : CustomerAddress) : CustomerAddress
+        +update(address : CustomerAddress) : CustomerAddress
+    }
+
+    interface RestaurantTableDAO {
+        +findById(id : Integer) : RestaurantTable
+        +findAll() : List<RestaurantTable>
+        +findAvailable() : List<RestaurantTable>
+        +save(table : RestaurantTable) : RestaurantTable
+        +update(table : RestaurantTable) : RestaurantTable
+    }
+
+    interface CategoryDAO {
+        +findById(id : Integer) : Category
+        +findAll() : List<Category>
+        +save(category : Category) : Category
+        +update(category : Category) : Category
+        +delete(id : Integer) : Boolean
+    }
+
+    interface ProductDAO {
+        +findById(id : Integer) : Product
+        +findAll() : List<Product>
+        +findByCategory(categoryId : Integer) : List<Product>
+        +save(product : Product) : Product
+        +update(product : Product) : Product
+        +delete(id : Integer) : Boolean
+    }
+
+    interface OrderDAO {
+        +findById(id : Integer) : Order
+        +findAll() : List<Order>
+        +findByStatus(status : OrderStatus) : List<Order>
+        +save(order : Order) : Order
+        +update(order : Order) : Order
+    }
+
+    interface DineInOrderDAO {
+        +findByOrderId(orderId : Integer) : DineInOrder
+        +save(order : DineInOrder) : DineInOrder
+        +update(order : DineInOrder) : DineInOrder
+    }
+
+    interface DeliveryOrderDAO {
+        +findByOrderId(orderId : Integer) : DeliveryOrder
+        +findByCustomer(customerId : UUID) : List<DeliveryOrder>
+        +save(order : DeliveryOrder) : DeliveryOrder
+        +update(order : DeliveryOrder) : DeliveryOrder
+    }
+
+    interface OrderDetailDAO {
+        +findById(id : Integer) : OrderDetail
+        +findByOrder(orderId : Integer) : List<OrderDetail>
+        +save(detail : OrderDetail) : OrderDetail
+        +update(detail : OrderDetail) : OrderDetail
+        +delete(id : Integer) : Boolean
+    }
+
+    interface OrderStateHistoryDAO {
+        +findByOrder(orderId : Integer) : List<OrderStateHistory>
+        +save(history : OrderStateHistory) : OrderStateHistory
+    }
+
+    interface OrderDetailStateHistoryDAO {
+        +findByOrderDetail(orderDetailId : Integer) : List<OrderDetailStateHistory>
+        +save(history : OrderDetailStateHistory) : OrderDetailStateHistory
+    }
+
+    interface InvoiceDAO {
+        +findById(id : Integer) : Invoice
+        +findByOrder(orderId : Integer) : Invoice
+        +save(invoice : Invoice) : Invoice
+        +update(invoice : Invoice) : Invoice
+    }
+
+    interface PaymentDAO {
+        +findByInvoice(invoiceId : Integer) : Payment
+        +save(payment : Payment) : Payment
+        +update(payment : Payment) : Payment
+    }
+}
+
+
+' =========================================================
+' SERVICES
+' =========================================================
+
+package "Services" {
+
+    class UserService {
+        +getUser(id : UUID) : User
+        +getUsers() : List<User>
+        +createUser(user : User) : User
+        +updateUser(user : User) : User
+        +deleteUser(id : UUID) : Boolean
+    }
+
+    class CustomerService {
+        +getCustomer(id : UUID) : Customer
+        +getCustomers() : List<Customer>
+        +createCustomer(customer : Customer) : Customer
+        +updateCustomer(customer : Customer) : Customer
+    }
+
+    class CustomerAddressService {
+        +getAddresses(customerId : UUID) : List<CustomerAddress>
+        +createAddress(address : CustomerAddress) : CustomerAddress
+        +updateAddress(address : CustomerAddress) : CustomerAddress
+    }
+
+    class RestaurantTableService {
+        +getTables() : List<RestaurantTable>
+        +getAvailableTables() : List<RestaurantTable>
+        +createTable(table : RestaurantTable) : RestaurantTable
+        +updateTable(table : RestaurantTable) : RestaurantTable
+    }
+
+    class CategoryService {
+        +getCategories() : List<Category>
+        +createCategory(category : Category) : Category
+        +updateCategory(category : Category) : Category
+        +deleteCategory(id : Integer) : Boolean
+    }
+
+    class ProductService {
+        +getProducts() : List<Product>
+        +getProduct(id : Integer) : Product
+        +getProductsByCategory(categoryId : Integer) : List<Product>
+        +createProduct(product : Product) : Product
+        +updateProduct(product : Product) : Product
+        +deleteProduct(id : Integer) : Boolean
+    }
+
+    class OrderService {
+        +getOrder(id : Integer) : Order
+        +getOrders() : List<Order>
+        +createOrder(order : Order) : Order
+        +updateOrder(order : Order) : Order
+        +changeStatus(orderId : Integer, status : OrderStatus) : Order
+        +cancelOrder(orderId : Integer) : Boolean
+    }
+
+    class DineInOrderService {
+        +createDineInOrder(order : DineInOrder) : DineInOrder
+        +assignTable(orderId : Integer, tableId : Integer) : DineInOrder
+        +getDineInOrder(orderId : Integer) : DineInOrder
+    }
+
+    class DeliveryOrderService {
+        +createDeliveryOrder(order : DeliveryOrder) : DeliveryOrder
+        +assignDomiciliary(orderId : Integer, userId : UUID) : DeliveryOrder
+        +updateDeliveryStatus(orderId : Integer, status : DeliveryStatus) : DeliveryOrder
+        +getDeliveryOrder(orderId : Integer) : DeliveryOrder
+    }
+
+    class OrderDetailService {
+        +getOrderDetails(orderId : Integer) : List<OrderDetail>
+        +addDetail(detail : OrderDetail) : OrderDetail
+        +updateDetail(detail : OrderDetail) : OrderDetail
+        +removeDetail(id : Integer) : Boolean
+        +changeDetailStatus(id : Integer, status : OrderDetailStatus) : OrderDetail
+    }
+
+    class OrderStateHistoryService {
+        +getOrderHistory(orderId : Integer) : List<OrderStateHistory>
+        +registerStateChange(history : OrderStateHistory) : OrderStateHistory
+    }
+
+    class OrderDetailStateHistoryService {
+        +getDetailHistory(orderDetailId : Integer) : List<OrderDetailStateHistory>
+        +registerStateChange(history : OrderDetailStateHistory) : OrderDetailStateHistory
+    }
+
+    class InvoiceService {
+        +getInvoice(id : Integer) : Invoice
+        +getInvoiceByOrder(orderId : Integer) : Invoice
+        +createInvoice(invoice : Invoice) : Invoice
+        +issueInvoice(id : Integer) : Invoice
+        +cancelInvoice(id : Integer) : Boolean
+    }
+
+    class PaymentService {
+        +getPayment(invoiceId : Integer) : Payment
+        +createPayment(payment : Payment) : Payment
+        +processPayment(invoiceId : Integer) : Payment
+        +refundPayment(invoiceId : Integer) : Payment
+    }
+}
+
+
+' =========================================================
+' CONTROLLERS
+' =========================================================
+
+package "Controllers" {
+
+    class UserController {
+        +getUsers()
+        +getUser(id : UUID)
+        +createUser()
+        +updateUser()
+        +deleteUser(id : UUID)
+    }
+
+    class CustomerController {
+        +getCustomers()
+        +getCustomer(id : UUID)
+        +createCustomer()
+        +updateCustomer()
+    }
+
+    class RestaurantTableController {
+        +getTables()
+        +getAvailableTables()
+        +createTable()
+        +updateTable()
+    }
+
+    class CategoryController {
+        +getCategories()
+        +createCategory()
+        +updateCategory()
+        +deleteCategory(id : Integer)
+    }
+
+    class ProductController {
+        +getProducts()
+        +getProduct(id : Integer)
+        +createProduct()
+        +updateProduct()
+        +deleteProduct(id : Integer)
+    }
+
+    class OrderController {
+        +getOrders()
+        +getOrder(id : Integer)
+        +createOrder()
+        +updateOrder()
+        +changeStatus()
+        +cancelOrder()
+    }
+
+    class DineInOrderController {
+        +createDineInOrder()
+        +assignTable()
+        +getDineInOrder()
+    }
+
+    class DeliveryOrderController {
+        +createDeliveryOrder()
+        +assignDomiciliary()
+        +updateDeliveryStatus()
+        +getDeliveryOrder()
+    }
+
+    class OrderDetailController {
+        +getOrderDetails(orderId : Integer)
+        +addDetail()
+        +updateDetail()
+        +removeDetail(id : Integer)
+        +changeStatus()
+    }
+
+    class OrderHistoryController {
+        +getOrderHistory(orderId : Integer)
+        +getDetailHistory(orderDetailId : Integer)
+    }
+
+    class InvoiceController {
+        +getInvoice(id : Integer)
+        +createInvoice()
+        +issueInvoice()
+        +cancelInvoice()
+    }
+
+    class PaymentController {
+        +getPayment(invoiceId : Integer)
+        +createPayment()
+        +processPayment()
+        +refundPayment()
+    }
+}
+
+
+' =========================================================
+' VIEW
+' =========================================================
+
+package "View" {
+
+    class LoginView <<Interface>> {
+        +login()
+    }
+
+    class WaiterView <<Interface>> {
+        +showTables()
+        +createOrder()
+        +manageOrder()
+        +markAsServed()
+    }
+
+    class KitchenView <<Interface>> {
+        +showPendingOrders()
+        +startPreparation()
+        +markAsReady()
+    }
+
+    class AdminView <<Interface>> {
+        +manageUsers()
+        +manageProducts()
+        +manageCategories()
+        +manageTables()
+        +showReports()
+    }
+
+    class CashierView <<Interface>> {
+        +showInvoice()
+        +registerPayment()
+    }
+
+    class DeliveryView <<Interface>> {
+        +showAssignedOrders()
+        +updateDeliveryStatus()
+    }
+}
+
+
+' =========================================================
+' CONTROLLER -> SERVICE
+' =========================================================
+
+UserController --> UserService
+CustomerController --> CustomerService
+RestaurantTableController --> RestaurantTableService
+CategoryController --> CategoryService
+ProductController --> ProductService
+OrderController --> OrderService
+DineInOrderController --> DineInOrderService
+DeliveryOrderController --> DeliveryOrderService
+OrderDetailController --> OrderDetailService
+OrderHistoryController --> OrderStateHistoryService
+OrderHistoryController --> OrderDetailStateHistoryService
+InvoiceController --> InvoiceService
+PaymentController --> PaymentService
+
+
+' =========================================================
+' SERVICE -> DAO
+' =========================================================
+
+UserService --> UserDAO
+CustomerService --> CustomerDAO
+CustomerAddressService --> CustomerAddressDAO
+RestaurantTableService --> RestaurantTableDAO
+CategoryService --> CategoryDAO
+ProductService --> ProductDAO
+OrderService --> OrderDAO
+DineInOrderService --> DineInOrderDAO
+DeliveryOrderService --> DeliveryOrderDAO
+OrderDetailService --> OrderDetailDAO
+OrderStateHistoryService --> OrderStateHistoryDAO
+OrderDetailStateHistoryService --> OrderDetailStateHistoryDAO
+InvoiceService --> InvoiceDAO
+PaymentService --> PaymentDAO
+
+
+' =========================================================
+' DAO -> DATABASE
+' =========================================================
+
+UserDAO ..> User
+CustomerDAO ..> Customer
+CustomerAddressDAO ..> CustomerAddress
+RestaurantTableDAO ..> RestaurantTable
+CategoryDAO ..> Category
+ProductDAO ..> Product
+OrderDAO ..> Order
+DineInOrderDAO ..> DineInOrder
+DeliveryOrderDAO ..> DeliveryOrder
+OrderDetailDAO ..> OrderDetail
+OrderStateHistoryDAO ..> OrderStateHistory
+OrderDetailStateHistoryDAO ..> OrderDetailStateHistory
+InvoiceDAO ..> Invoice
+PaymentDAO ..> Payment
+
+
+' =========================================================
+' VIEW -> CONTROLLER
+' =========================================================
+
+LoginView --> UserController
+
+WaiterView --> RestaurantTableController
+WaiterView --> OrderController
+WaiterView --> OrderDetailController
+WaiterView --> DineInOrderController
+
+KitchenView --> OrderController
+KitchenView --> OrderDetailController
+KitchenView --> OrderHistoryController
+
+AdminView --> UserController
+AdminView --> ProductController
+AdminView --> CategoryController
+AdminView --> RestaurantTableController
+
+CashierView --> InvoiceController
+CashierView --> PaymentController
+
+DeliveryView --> DeliveryOrderController
+
+
+' =========================================================
+' DATABASE RELATIONSHIPS
+' =========================================================
+
+AuthUser "1" -- "1" User
+AuthUser "1" -- "0..1" Customer
+
+Customer "1" -- "0..*" CustomerAddress
+Customer "1" -- "0..*" DeliveryOrder
+
+RestaurantTable "1" -- "0..*" DineInOrder
+
+Category "1" -- "0..*" Product
+Product "1" -- "0..*" OrderDetail
+
+Order "1" -- "0..1" DineInOrder
+Order "1" -- "0..1" DeliveryOrder
+Order "1" -- "1..*" OrderDetail
+Order "1" -- "0..*" OrderStateHistory
+Order "1" -- "0..1" Invoice
+
+OrderDetail "1" -- "0..*" OrderDetailStateHistory
+
+Invoice "1" -- "0..1" Payment
+
+User "1" -- "0..*" OrderStateHistory
+User "1" -- "0..*" OrderDetailStateHistory
+User "1" -- "0..*" DineInOrder
+User "1" -- "0..*" DeliveryOrder
+
+CustomerAddress "1" -- "0..*" DeliveryOrder
+
+@enduml
