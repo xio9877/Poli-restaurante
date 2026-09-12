@@ -1,0 +1,279 @@
+Project PoliRestaurant {
+  database_type: 'PostgreSQL'
+  Note: 'Database to Application of PoliRestaurant'
+}
+
+Table auth.users {
+  id uuid [pk]
+  Note: 'Maneged by Supabase Auth'
+}
+
+Table users {
+  id uuid [pk, not null]
+  name varchar(70) [not null]
+  username varchar(70) [unique, not null]
+  role user_role [not null]
+  created_at timestamp [not null, default: 'now']
+  updated_at timestamp [null]
+}
+
+Enum user_role {
+  admin
+  waiter
+  kitchen
+  cashier
+  domiciliary
+}
+
+Table customers {
+  id uuid [pk, not null]
+  name varchar(70) [not null]
+  username varchar(70) [unique, not null]
+  phone varchar(30) [not null]
+  created_at timestamp [not null, default: 'now']
+  updated_at timestamp [null]
+}
+
+Table customer_addresses {
+  id integer [pk, not null]
+  id_customer uuid [not null]
+  label varchar(70) [not null]
+  address varchar(255) [not null]
+  additional_info varchar(255) [not null]
+  created_at timestamp [not null, default: 'now']
+}
+
+Table restaurant_tables{
+  id integer [pk]
+  name varchar [not null]
+  description varchar [null]
+  state table_status [not null]
+  created_at timestamp [not null, default: 'now']
+  updated_at timestamp [null]
+}
+
+Enum table_status {
+  available
+  unavailable
+}
+
+Table categories {
+  id integer [pk]
+  name varchar [not null]
+  description varchar [null]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table products {
+  id integer [pk]
+  id_category integer [not null]
+  name varchar [not null]
+  description varchar [null]
+  price decimal [not null]
+  status product_status [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [null]
+}
+
+Enum product_status {
+  available
+  unavailable
+}
+
+Table orders {
+  id integer [pk]
+  status order_status [not null]
+  subtotal decimal(12,2) [not null]
+  tax_rate decimal(5,2) [not null, default: 0]
+  tax_amount decimal(12,2) [not null, default: 0]
+  discount decimal(12,2) [not null, default: 0]
+  total decimal(12,2) [not null]
+  notes varchar [null]
+  created_at timestamp [not null, default: 'now']
+  updated_at timestamp [null]
+  completed_at timestamp [null]
+  canceled_at timestamp [null]
+}
+
+Table dine_in_orders {
+  id_order integer [pk, not null]
+  id_table integer [not null]
+  id_waiter uuid [not null]
+  guest_count integer [null]
+}
+
+Table delivery_orders {
+  id_order integer [pk, not null]
+  id_customer uuid [not null]
+  id_address integer [not null]
+  id_domiciliary integer [not null]
+  status delivery_status
+  delivery_fee decimal(12,2)
+  created_at timestamp
+  updated_at timestamp
+  delivered_at timestamp
+}
+
+Enum delivery_status {
+  pending
+  assigned
+  picked_up
+  delivered
+  canceled
+}
+
+Table order_state_history {
+  id integer [pk]
+  id_order integer [not null]
+  id_user uuid [not null]
+  notes varchar [null]
+  old_state order_status [null]
+  new_state order_status [not null]
+  created_at timestamp [not null]
+}
+
+Enum order_status{
+  open
+  in_preparation
+  ready
+  served
+  canceled
+}
+
+Table order_detail {
+  id integer [pk]
+  id_order integer [not null]
+  id_product integer [not null]
+  amount integer [not null]
+  unit_price decimal(12,2) [not null]
+  notes varchar [null]
+  state order_detail_status [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [null]
+  completed_at timestamp [null]
+  canceled_at timestamp [null]
+}
+
+Enum order_detail_status{
+  pending
+  in_preparation
+  ready
+  served
+  canceled
+}
+
+Table order_detail_state_history {
+  id integer [pk]
+  id_order_detail integer [not null]
+  id_user uuid [not null]
+  notes varchar [null]
+  old_state order_detail_status [null]
+  new_state order_detail_status [not null]
+  created_at timestamp [not null]
+}
+
+Table invoices {
+  id integer [pk]
+  id_order integer [not null]
+  id_cashier uuid [not null]
+  subtotal decimal(12,2) [not null]
+  tax_rate decimal(5,2) [not null, default: 0]
+  tax_amount decimal(12,2) [not null, default: 0]
+  total decimal(12,2) [not null]
+  status invoice_status [not null]
+  issued_at timestamp
+  created_at timestamp
+}
+
+Enum invoice_status {
+  draft
+  issued
+  canceled
+}
+
+Table payments {
+  id_invoice integer [pk,  not null]
+  amount decimal(12,2) [not null]
+  method payment_method
+  status payment_status
+  notes varchar [null]
+  paid_at timestamp
+  created_at timestamp
+}
+
+Enum payment_method {
+  cash
+  debit_card
+  credit_card
+  transfer
+  other
+}
+
+Enum payment_status {
+  pending
+  completed
+  failed
+  refunded
+}
+
+TableGroup "Authentication and Users" {
+  auth.users
+  users
+}
+
+TableGroup "Customers" {
+  customers
+  customer_addresses
+}
+
+
+TableGroup "Menu" {
+  categories
+  products
+}
+
+
+TableGroup "Orders" {
+  restaurant_tables
+  orders
+  dine_in_orders
+  delivery_orders
+  order_detail
+  order_state_history
+  order_detail_state_history
+}
+
+
+TableGroup "Billing and Payments" {
+  invoices
+  payments
+
+}
+
+Ref: auth.users.id - users.id
+Ref: auth.users.id - customers.id
+
+Ref: users.id < order_state_history.id_user
+Ref: users.id < order_detail_state_history.id_user
+Ref: users.id < dine_in_orders.id_waiter
+Ref: users.id < delivery_orders.id_domiciliary
+
+Ref: customers.id < customer_addresses.id_customer
+Ref: customers.id < delivery_orders.id_customer
+
+Ref: customer_addresses.id < delivery_orders.id_address
+
+Ref: restaurant_tables.id < dine_in_orders.id_table
+
+Ref: categories.id < products.id_category
+Ref: products.id < order_detail.id_product
+
+Ref: orders.id - dine_in_orders.id_order
+Ref: orders.id < order_detail.id_order
+Ref: orders.id < order_state_history.id_order
+Ref: orders.id < invoices.id_order
+
+Ref: order_detail.id < order_detail_state_history.id_order_detail
+
+Ref: invoices.id - payments.id_invoice
