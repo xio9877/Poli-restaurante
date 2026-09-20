@@ -1,0 +1,60 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "disabled_providers": ["openai"],
+
+  "provider": {
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LiteLLM VM (nemotron-ultra)",
+      "options": {
+        "baseURL": "https://assistant.tailb704d1.ts.net:4443/v1",
+        "apiKey": "{env:LITELLM_MASTER_KEY}"
+      },
+      "models": {
+        "coder": { "name": "coder · nemotron-ultra (NVIDIA NIM)" }
+      }
+    }
+  },
+  "model": "litellm/coder",
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "edit": "allow",
+    "bash": {
+      "npm *": "allow",
+      "node *": "allow",
+      "npx *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git branch*": "allow",
+      "git add*": "allow",
+      "git commit*": "allow",
+      "git stash*": "allow",
+      "git checkout*": "allow",
+      "git restore*": "allow",
+      "ls*": "allow",
+      "cat*": "allow",
+      "head*": "allow",
+      "tail*": "allow",
+      "grep*": "allow",
+      "rg*": "allow",
+      "find*": "allow",
+      "wc*": "allow",
+      "sort*": "allow",
+      "diff*": "allow",
+      "echo*": "allow",
+      "pwd*": "allow",
+      "which*": "allow",
+      "mkdir*": "allow",
+      "cp*": "allow",
+      "mv*": "allow",
+      "touch*": "allow",
+      "*": "ask"
+    }
+  }
+}
