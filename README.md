@@ -95,6 +95,8 @@ src/
 │   ├── categories/ # Categorías de productos
 │   └── products/   # Productos del menú
 ├── orders/
+│   ├── orders.controller.ts
+│   ├── orders.service.ts
 │   ├── dine-in/    # Pedidos en comedor
 │   ├── delivery/   # Pedidos a domicilio
 │   ├── details/    # Detalles de pedido
@@ -107,6 +109,10 @@ src/
 ├── database/       # PrismaService (global)
 └── health/         # Health checks (terminus)
 ```
+
+Los módulos funcionales cuentan con archivos `*.controller.ts` y `*.service.ts`
+como punto de partida para agregar endpoints y lógica de negocio. Los módulos
+`menu` y `billing` agrupan submódulos; sus controladores viven en cada submódulo.
 
 ## Arquitectura
 
