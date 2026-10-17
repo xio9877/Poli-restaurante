@@ -38,15 +38,6 @@ npm run prisma:migrate
 npm run start:dev
 ```
 
-### GitHub Codespaces
-
-1. Abrir en Codespaces (botón "Code" → "Codespaces" → "Create codespace on main")
-2. Esperar a que termine el `postCreateCommand` (instala deps + prisma generate)
-3. Ejecutar migraciones: `npm run prisma:migrate`
-4. Iniciar: `npm run start:dev`
-
-La app estará en `http://localhost:3000` (puerto forward automático).
-
 ## Variables de Entorno
 
 | Variable | Descripción | Requerido |
@@ -164,13 +155,6 @@ npm run prisma:migrate
 ```bash
 npm run prisma:studio
 # Abre http://localhost:5555
-```
-
-### Docker (Producción)
-
-```bash
-docker build -t poli-restaurante .
-docker run -p 3000:3000 --env-file .env poli-restaurante
 ```
 
 ## Calidad de Código
