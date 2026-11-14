@@ -1,0 +1,357 @@
+<div class="space-y-6" x-data="menu()">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <h2 class="text-2xl font-bold text-dark-900">Gestión de Menú</h2>
+    <div class="flex gap-2">
+      <button @click="openProductModal()" class="btn-primary">+ Producto</button>
+      <button @click="openCategoryModal()" class="btn-secondary">+ Categoría</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <h3 class="font-semibold text-dark-900">Categorías</h3>
+        <span class="badge badge-gray" x-text="categories.length"></span>
+      </div>
+      <div class="divide-y divide-dark-100 max-h-[600px] overflow-y-auto scrollbar-thin">
+        <template x-for="cat in categories" :key="cat.id">
+          <button
+            @click="selectCategory(cat.id)"
+            class="w-full p-4 text-left hover:bg-dark-50 flex items-center justify-between"
+            :class="{ 'bg-primary-50 border-r-2 border-primary-600': selectedCategory === cat.id }"
+          >
+            <div>
+              <p class="font-medium text-dark-900" x-text="cat.name"></p>
+              <p class="text-xs text-dark-500" x-text="countProducts(cat.id) + ' productos'"></p>
+            </div>
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                @click.stop="openCategoryModal(cat)"
+                class="p-1.5 rounded text-dark-400 hover:text-primary-600"
+                title="Editar"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  ></path>
+                </svg>
+              </button>
+              <button
+                @click.stop="deleteCategory(cat)"
+                class="p-1.5 rounded text-dark-400 hover:text-red-600"
+                title="Eliminar"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <div class="lg:col-span-3">
+      <div class="card">
+        <div class="card-header flex flex-wrap gap-2">
+          <button
+            @click="productFilter = 'all'; loadProducts()"
+            class="px-3 py-1 rounded-full text-sm font-medium"
+            :class="productFilter === 'all' ? 'bg-primary-600 text-white' : 'bg-dark-100 text-dark-700'"
+          >
+            Todos
+          </button>
+          <button
+            @click="productFilter = 'available'; loadProducts()"
+            class="px-3 py-1 rounded-full text-sm font-medium"
+            :class="productFilter === 'available' ? 'bg-green-600 text-white' : 'bg-dark-100 text-dark-700'"
+          >
+            Disponibles
+          </button>
+          <button
+            @click="productFilter = 'unavailable'; loadProducts()"
+            class="px-3 py-1 rounded-full text-sm font-medium"
+            :class="productFilter === 'unavailable' ? 'bg-dark-600 text-white' : 'bg-dark-100 text-dark-700'"
+          >
+            No Disp.
+          </button>
+          <div class="flex-1"></div>
+          <input
+            type="text"
+            x-model="search"
+            @input.debounce.300="loadProducts()"
+            placeholder="Buscar productos..."
+            class="input w-48"
+          />
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-dark-50">
+              <tr>
+                <th
+                  class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+                >
+                  Producto
+                </th>
+                <th
+                  class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+                >
+                  Categoría
+                </th>
+                <th
+                  class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+                >
+                  Precio
+                </th>
+                <th
+                  class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+                >
+                  Estado
+                </th>
+                <th
+                  class="px-4 py-3 text-right text-xs font-semibold text-dark-600 uppercase tracking-wider"
+                >
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-dark-100">
+              <template x-for="product in products" :key="product.id">
+                <tr class="hover:bg-dark-50">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-700 font-bold"
+                        x-text="product.name.charAt(0)"
+                      ></div>
+                      <div>
+                        <p class="font-medium text-dark-900" x-text="product.name"></p>
+                        <template x-if="product.description">
+                          <p
+                            class="text-sm text-dark-500 truncate max-w-xs"
+                            x-text="product.description"
+                          ></p>
+                        </template>
+                      </div>
+                    </div>
+                  </td>
+                  <td
+                    class="px-4 py-3 text-sm text-dark-600"
+                    x-text="product.category?.name || 'Sin categoría'"
+                  ></td>
+                  <td
+                    class="px-4 py-3 font-semibold text-dark-900"
+                    x-text="$store.formatters.currency(product.price)"
+                  ></td>
+                  <td class="px-4 py-3">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        :checked="product.status === 'available'"
+                        @change="toggleStatus(product)"
+                        class="sr-only peer"
+                      />
+                      <div
+                        class="w-11 h-6 bg-dark-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-dark-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"
+                      ></div>
+                    </label>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <div class="flex items-center justify-end gap-1">
+                      <button
+                        @click="openProductModal(product)"
+                        class="p-2 rounded-lg text-dark-500 hover:text-dark-700 hover:bg-dark-100"
+                        title="Editar"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          ></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="products.length === 0">
+                <td colspan="5" class="px-4 py-12 text-center text-dark-500">No hay productos</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Modal -->
+  <div
+    x-show="showProductModal"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-50 overflow-y-auto"
+    @click.self="closeProductModal()"
+  >
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div
+        class="relative w-full max-w-lg bg-white rounded-xl shadow-xl max-h-[90vh] overflow-y-auto"
+      >
+        <div
+          class="p-5 border-b border-dark-200 flex items-center justify-between sticky top-0 bg-white z-10"
+        >
+          <h3
+            class="text-lg font-semibold text-dark-900"
+            x-text="editingProduct ? 'Editar Producto' : 'Nuevo Producto'"
+          ></h3>
+          <button @click="closeProductModal()" class="text-dark-400 hover:text-dark-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="saveProduct()" class="p-5 space-y-4">
+          <input type="hidden" x-model="productForm.id" />
+          <div>
+            <label class="label">Nombre *</label>
+            <input
+              type="text"
+              x-model="productForm.name"
+              required
+              class="input"
+              placeholder="Ej: Bandeja Paisa"
+            />
+          </div>
+          <div>
+            <label class="label">Descripción</label>
+            <textarea
+              x-model="productForm.description"
+              rows="2"
+              class="input"
+              placeholder="Ingredientes, detalles..."
+            ></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="label">Categoría *</label>
+              <select x-model.number="productForm.categoryId" required class="input">
+                <option value="">Seleccionar...</option>
+                <template x-for="cat in categories" :key="cat.id">
+                  <option :value="cat.id" x-text="cat.name"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label">Precio *</label>
+              <input
+                type="number"
+                x-model.number="productForm.price"
+                required
+                min="0"
+                step="100"
+                class="input"
+                placeholder="25000"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="label">Estado</label>
+            <select x-model="productForm.status" class="input">
+              <option value="available">Disponible</option>
+              <option value="unavailable">No Disponible</option>
+            </select>
+          </div>
+          <div class="flex gap-3 pt-4 border-t border-dark-200">
+            <button type="button" @click="closeProductModal()" class="flex-1 btn-secondary">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="flex-1 btn-primary"
+              x-text="editingProduct ? 'Actualizar' : 'Crear'"
+            ></button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div
+      x-show="showCategoryModal"
+      x-transition:enter="transition ease-out duration-200"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      x-transition:leave="transition ease-in duration-150"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+      class="fixed inset-0 z-50 overflow-y-auto"
+      @click.self="closeCategoryModal()"
+    >
+      <div class="flex min-h-full items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-white rounded-xl shadow-xl">
+          <div class="p-5 border-b border-dark-200 flex items-center justify-between">
+            <h3
+              class="text-lg font-semibold text-dark-900"
+              x-text="editingCategory ? 'Editar Categoría' : 'Nueva Categoría'"
+            ></h3>
+            <button @click="closeCategoryModal()" class="text-dark-400 hover:text-dark-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
+          </div>
+          <form @submit.prevent="saveCategory()" class="p-5 space-y-4">
+            <input type="hidden" x-model="categoryForm.id" />
+            <div>
+              <label class="label">Nombre *</label>
+              <input
+                type="text"
+                x-model="categoryForm.name"
+                required
+                class="input"
+                placeholder="Ej: Platos Fuertes"
+              />
+            </div>
+            <div>
+              <label class="label">Descripción</label>
+              <textarea x-model="categoryForm.description" rows="2" class="input"></textarea>
+            </div>
+            <div class="flex gap-3 pt-4">
+              <button type="button" @click="closeCategoryModal()" class="flex-1 btn-secondary">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="flex-1 btn-primary"
+                x-text="editingCategory ? 'Actualizar' : 'Crear'"
+              ></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
