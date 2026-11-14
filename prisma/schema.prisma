@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/database/generated/prisma"
 }
 
 datasource db {
@@ -109,6 +110,7 @@ model CustomerAddress {
   additionalInfo  String    @db.VarChar(255) @map("additional_info")
   createdAt       DateTime  @default(now()) @map("created_at")
   customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
   deliveryOrders  DeliveryOrder[]
 
   @@map("customer_addresses")
