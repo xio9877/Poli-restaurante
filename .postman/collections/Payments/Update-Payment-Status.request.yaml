@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Payment Status
+order: 1020
+url: '{{baseUrl}}/payments/invoice/{{invoiceId}}/status'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "completed",
+      "notes": "Pago en efectivo recibido"
+    }

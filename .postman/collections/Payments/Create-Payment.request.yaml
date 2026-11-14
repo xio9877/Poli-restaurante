@@ -1,0 +1,19 @@
+$kind: http-request
+name: Create Payment
+order: 1000
+url: '{{baseUrl}}/payments'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "invoiceId": {{invoiceId}},
+      "amount": 59500,
+      "method": "cash",
+      "status": "pending"
+    }
