@@ -1,0 +1,131 @@
+<div class="space-y-6" x-data="reports()">
+  <h2 class="text-2xl font-bold text-dark-900">Reportes y Análisis</h2>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <h3 class="font-semibold text-dark-900">Ventas por Día</h3>
+        <select x-model="salesRange" @change="loadSales()" class="input w-auto">
+          <option value="7">Últimos 7 días</option>
+          <option value="30">Últimos 30 días</option>
+          <option value="90">Últimos 90 días</option>
+        </select>
+      </div>
+      <div class="card-body h-80 overflow-y-auto">
+        <template x-if="salesByDay.length">
+          <div class="space-y-3">
+            <template x-for="day in salesByDay" :key="day.date">
+              <div class="flex items-center gap-3 text-sm">
+                <span class="w-24 shrink-0 text-dark-500" x-text="day.date"></span>
+                <div class="h-3 flex-1 overflow-hidden rounded-full bg-dark-100">
+                  <div
+                    class="h-full rounded-full bg-primary-500"
+                    :style="`width: ${Math.max(4, day.total / Math.max(1, ...salesByDay.map(item => item.total)) * 100)}%`"
+                  ></div>
+                </div>
+                <span
+                  class="w-28 shrink-0 text-right font-medium text-dark-700"
+                  x-text="$store.formatters.currency(day.total)"
+                ></span>
+              </div>
+            </template>
+          </div>
+        </template>
+        <p x-show="salesByDay.length === 0" class="py-8 text-center text-dark-500">
+          Sin ventas en este período
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <h3 class="font-semibold text-dark-900">Top Productos</h3>
+        <select x-model="topRange" @change="loadTopProducts()" class="input w-auto">
+          <option value="7">Últimos 7 días</option>
+          <option value="30">Últimos 30 días</option>
+          <option value="90">Últimos 90 días</option>
+        </select>
+      </div>
+      <div class="card-body max-h-80 overflow-y-auto scrollbar-thin divide-y divide-dark-100">
+        <template x-for="(item, index) in topProducts" :key="item.productId">
+          <div class="py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span
+                class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold"
+                x-text="index + 1"
+              ></span>
+              <div>
+                <p class="font-medium text-dark-900" x-text="item.name"></p>
+                <p class="text-sm text-dark-500" x-text="item.count + ' vendidos'"></p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p
+                class="font-semibold text-dark-900"
+                x-text="$store.formatters.currency(item.revenue)"
+              ></p>
+            </div>
+          </div>
+        </template>
+        <div x-show="topProducts.length === 0" class="py-8 text-center text-dark-500">
+          Sin datos
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="card p-5">
+      <h3 class="font-semibold text-dark-900 mb-4">Resumen del Período</h3>
+      <div class="space-y-3">
+        <div class="flex justify-between">
+          <span class="text-dark-600">Total Ventas</span>
+          <span
+            class="font-bold text-dark-900"
+            x-text="$store.formatters.currency(salesSummary.totalSales)"
+          ></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-dark-600">Total Órdenes</span>
+          <span class="font-bold text-dark-900" x-text="salesSummary.totalOrders"></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-dark-600">Ticket Promedio</span>
+          <span
+            class="font-bold text-dark-900"
+            x-text="$store.formatters.currency(salesSummary.avgTicket)"
+          ></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p-5 lg:col-span-2">
+      <h3 class="font-semibold text-dark-900 mb-4">Tiempos de Preparación</h3>
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        <div class="p-3 bg-primary-50 rounded-lg text-center">
+          <p class="text-2xl font-bold text-primary-700" x-text="prepReport.avgPrepTime || 0"></p>
+          <p class="text-xs text-primary-600">Promedio (min)</p>
+        </div>
+        <div class="p-3 bg-green-50 rounded-lg text-center">
+          <p class="text-2xl font-bold text-green-700" x-text="prepReport.minPrepTime || 0"></p>
+          <p class="text-xs text-green-600">Mínimo (min)</p>
+        </div>
+        <div class="p-3 bg-red-50 rounded-lg text-center">
+          <p class="text-2xl font-bold text-red-700" x-text="prepReport.maxPrepTime || 0"></p>
+          <p class="text-xs text-red-600">Máximo (min)</p>
+        </div>
+      </div>
+      <div class="max-h-60 overflow-y-auto scrollbar-thin divide-y divide-dark-100">
+        <template x-for="item in prepReport.byProduct" :key="item.product">
+          <div class="py-3 flex justify-between">
+            <span class="text-dark-700" x-text="item.product"></span>
+            <div class="text-right">
+              <p class="font-medium text-dark-900" x-text="item.avgTime + ' min'"></p>
+              <p class="text-xs text-dark-500" x-text="item.samples + ' muestras'"></p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
