@@ -1,0 +1,8 @@
+# Use this workspace to collaborate
+workspace:
+  id: 02277541-280c-4e90-8bd3-46660eb2c26d
+
+# Collections are stored in `.postman/collections` and registered in Local View.
+localResources:
+  collections:
+    - ../.postman/collections/

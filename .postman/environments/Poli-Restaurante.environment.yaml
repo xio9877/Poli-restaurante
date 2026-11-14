@@ -1,0 +1,46 @@
+name: Poli Restaurante
+values:
+  - key: baseUrl
+    value: 'http://localhost:3000'
+    enabled: true
+    type: default
+  - key: authToken
+    value: ''
+    enabled: true
+    type: default
+  - key: productId
+    value: '1'
+    enabled: true
+    type: default
+  - key: categoryId
+    value: '1'
+    enabled: true
+    type: default
+  - key: tableId
+    value: '1'
+    enabled: true
+    type: default
+  - key: userId
+    value: '1'
+    enabled: true
+    type: default
+  - key: orderId
+    value: '1'
+    enabled: true
+    type: default
+  - key: detailId
+    value: '1'
+    enabled: true
+    type: default
+  - key: customerId
+    value: '1'
+    enabled: true
+    type: default
+  - key: addressId
+    value: '1'
+    enabled: true
+    type: default
+  - key: invoiceId
+    value: '1'
+    enabled: true
+    type: default
