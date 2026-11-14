@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Kitchen Orders
+order: 1000
+url: '{{baseUrl}}/kitchen/orders'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

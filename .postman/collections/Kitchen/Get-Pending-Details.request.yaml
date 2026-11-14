@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Pending Details
+order: 3000
+url: '{{baseUrl}}/kitchen/details/pending'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

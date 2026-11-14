@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Prep Stats
+order: 5000
+url: '{{baseUrl}}/kitchen/stats'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

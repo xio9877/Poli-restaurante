@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Detail Status
+order: 4000
+url: '{{baseUrl}}/kitchen/details/{{detailId}}/status'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "ready",
+      "notes": "Plato listo"
+    }
