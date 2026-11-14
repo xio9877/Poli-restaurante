@@ -14,7 +14,7 @@ import { DetailsService } from './details.service';
 import { SupabaseAuthGuard } from '@/auth/supabase-auth.guard';
 import { CurrentUserId } from '@/common/decorators/current-user.decorator';
 import { PaginatedResultDto } from '@/common/dto/pagination.dto';
-import { CreateOrderDetailDto, AddDetailToOrderDto, UpdateDetailStatusDto } from './dto/detail.dto';
+import { UpdateOrderDetailDto, AddDetailToOrderDto, UpdateDetailStatusDto } from './dto/detail.dto';
 
 @Controller('orders/:orderId/details')
 @UseGuards(SupabaseAuthGuard)
@@ -38,26 +38,37 @@ export class DetailsController {
   }
 
   @Get(':id')
-  async findById(@Param('id', ParseIntPipe) id: number) {
-    return this.detailsService.findById(id);
+  async findById(
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    return this.detailsService.findById(id, orderId);
   }
 
   @Patch(':id/status')
   async updateStatus(
+    @Param('orderId', ParseIntPipe) orderId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateDetailStatusDto,
     @CurrentUserId() userId: string
   ) {
-    return this.detailsService.updateStatus(id, dto.status, userId, dto.notes);
+    return this.detailsService.updateStatus(id, dto.status, userId, dto.notes, orderId);
   }
 
   @Patch(':id')
-  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateOrderDetailDto) {
-    return this.detailsService.update(id, dto);
+  async update(
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateOrderDetailDto
+  ) {
+    return this.detailsService.update(id, dto, orderId);
   }
 
   @Delete(':id')
-  async delete(@Param('id', ParseIntPipe) id: number) {
-    return this.detailsService.delete(id);
+  async delete(
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    return this.detailsService.delete(id, orderId);
   }
 }

@@ -1,10 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { PaginatedResultDto } from '../common/dto/pagination.dto';
+import { DetailsService } from '../orders/details/details.service';
+import { OrderDetailStatus } from '../orders/details/dto/detail.dto';
 
 @Injectable()
 export class KitchenService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private detailsService: DetailsService
+  ) {}
 
   private get client() {
     return this.prisma.client;
@@ -14,160 +19,107 @@ export class KitchenService {
     const orders = await this.client.order.findMany({
       where: { status: { in: ['open', 'in_preparation'] } },
       orderBy: { createdAt: 'asc' },
+      include: {
+        details: { include: { product: true } },
+        dineInOrder: { include: { table: true } },
+      },
     });
+    const data = orders.map((order) => ({
+      ...order,
+      tableName: order.dineInOrder?.table.name ?? null,
+    }));
 
-    const ordersWithDetails = await Promise.all(
-      orders.map(async (order) => {
-        const details = await this.client.orderDetail.findMany({
-          where: { orderId: order.id },
-          include: { product: true },
-        });
-        const dineIn = await this.client.dineInOrder.findUnique({ where: { orderId: order.id } });
-        let tableName = null;
-        if (dineIn) {
-          const table = await this.client.restaurantTable.findUnique({
-            where: { id: dineIn.tableId },
-          });
-          tableName = table?.name;
-        }
-        return { ...order, details, tableName };
-      })
-    );
-
-    return new PaginatedResultDto(
-      ordersWithDetails,
-      ordersWithDetails.length,
-      1,
-      ordersWithDetails.length
-    );
+    return new PaginatedResultDto(data, data.length, 1, Math.max(data.length, 1));
   }
 
   async getOrderForKitchen(id: number) {
-    const order = await this.client.order.findUnique({ where: { id } });
-    if (!order) return null;
+    const order = await this.client.order.findUnique({
+      where: { id },
+      include: {
+        details: { include: { product: true } },
+        dineInOrder: { include: { table: true } },
+      },
+    });
+    if (!order) throw new NotFoundException('Order not found');
 
-    const details = await this.client.orderDetail.findMany({ where: { orderId: id } });
-    const dineIn = await this.client.dineInOrder.findUnique({ where: { orderId: id } });
-    let tableName = null;
-    if (dineIn) {
-      const table = await this.client.restaurantTable.findUnique({ where: { id: dineIn.tableId } });
-      tableName = table?.name;
-    }
-
-    return { ...order, details, tableName };
+    return {
+      ...order,
+      tableName: order.dineInOrder?.table.name ?? null,
+    };
   }
 
   async getPendingDetails(): Promise<PaginatedResultDto<any>> {
     const details = await this.client.orderDetail.findMany({
-      where: { state: { in: ['pending', 'in_preparation'] } },
+      where: {
+        state: { in: ['pending', 'in_preparation'] },
+        order: { status: { in: ['open', 'in_preparation'] } },
+      },
       orderBy: { createdAt: 'asc' },
+      include: {
+        product: true,
+        order: { include: { dineInOrder: { include: { table: true } } } },
+      },
     });
+    const data = details.map((detail) => ({
+      ...detail,
+      tableName: detail.order.dineInOrder?.table.name ?? null,
+    }));
 
-    const detailsWithInfo = await Promise.all(
-      details.map(async (detail) => {
-        const product = await this.client.product.findUnique({ where: { id: detail.productId } });
-        const order = await this.client.order.findUnique({ where: { id: detail.orderId } });
-        let tableName = null;
-        if (order) {
-          const dineIn = await this.client.dineInOrder.findUnique({ where: { orderId: order.id } });
-          if (dineIn) {
-            const table = await this.client.restaurantTable.findUnique({
-              where: { id: dineIn.tableId },
-            });
-            tableName = table?.name;
-          }
-        }
-        return { ...detail, product, order, tableName };
-      })
-    );
-
-    return new PaginatedResultDto(
-      detailsWithInfo,
-      detailsWithInfo.length,
-      1,
-      detailsWithInfo.length
-    );
+    return new PaginatedResultDto(data, data.length, 1, Math.max(data.length, 1));
   }
 
-  async updateDetailStatus(id: number, status: string, userId: string, notes?: string) {
-    const detail = await this.client.orderDetail.findUnique({ where: { id } });
-    if (!detail) throw new Error('Order detail not found');
-
-    await this.client.$transaction(async (tx) => {
-      await tx.orderDetail.update({
-        where: { id },
-        data: {
-          state: status as any,
-          ...(status === 'served' && { completedAt: new Date() }),
-          ...(status === 'canceled' && { canceledAt: new Date() }),
-        },
-      });
-
-      await tx.orderDetailStateHistory.create({
-        data: { orderDetailId: id, userId, oldState: detail.state, newState: status as any, notes },
-      });
-
-      if (status === 'ready') {
-        const orderDetails = await tx.orderDetail.findMany({ where: { orderId: detail.orderId } });
-        const allReady = orderDetails.every((d) => d.state === 'ready' || d.state === 'served');
-        if (allReady) {
-          await tx.order.update({ where: { id: detail.orderId }, data: { status: 'ready' } });
-          await tx.orderStateHistory.create({
-            data: {
-              orderId: detail.orderId,
-              userId,
-              oldState: 'in_preparation',
-              newState: 'ready',
-              notes: 'Todos los productos listos',
-            },
-          });
-        }
-      }
-    });
-
-    return this.findById(id);
-  }
-
-  async findById(id: number) {
-    return this.client.orderDetail.findUnique({ where: { id } });
+  async updateDetailStatus(id: number, status: OrderDetailStatus, userId: string, notes?: string) {
+    return this.detailsService.updateStatus(id, status, userId, notes);
   }
 
   async getPrepStats() {
-    const history = await this.client.orderDetailStateHistory.findMany({
-      where: { newState: { in: ['ready', 'served'] } },
+    const completedDetails = await this.client.orderDetailStateHistory.findMany({
+      where: {
+        oldState: 'in_preparation',
+        newState: 'ready',
+        orderDetail: { order: { status: 'served' } },
+      },
       orderBy: { createdAt: 'desc' },
       take: 100,
+      include: { orderDetail: { include: { product: true } } },
     });
 
-    const times = await Promise.all(
-      history
-        .filter((h) => h.oldState === 'in_preparation' || h.oldState === 'pending')
-        .map(async (h) => {
-          const detail = await this.client.orderDetail.findUnique({
-            where: { id: h.orderDetailId },
-          });
-          if (!detail) return null;
-          const product = await this.client.product.findUnique({ where: { id: detail.productId } });
-          const order = await this.client.order.findUnique({ where: { id: detail.orderId } });
-          if (!order || order.status !== 'served') return null;
-          const start = new Date(detail.createdAt).getTime();
-          const end = new Date(h.createdAt).getTime();
-          const minutes = (end - start) / 1000 / 60;
-          if (minutes <= 0 || minutes > 120) return null;
-          return { product: product?.name, minutes, orderId: detail.orderId };
-        })
-    );
-
-    const validTimes = times.filter((t) => t !== null);
-
-    if (validTimes.length === 0)
+    if (completedDetails.length === 0) {
       return { avgPrepTime: 0, minPrepTime: 0, maxPrepTime: 0, samples: 0 };
+    }
+
+    const detailIds = [...new Set(completedDetails.map((history) => history.orderDetailId))];
+    const preparationStarts = await this.client.orderDetailStateHistory.findMany({
+      where: {
+        orderDetailId: { in: detailIds },
+        newState: 'in_preparation',
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { orderDetailId: true, createdAt: true },
+    });
+    const startByDetail = new Map<number, Date>();
+    for (const history of preparationStarts) {
+      if (!startByDetail.has(history.orderDetailId)) {
+        startByDetail.set(history.orderDetailId, history.createdAt);
+      }
+    }
+
+    const minutes = completedDetails
+      .map((history) => {
+        const start = startByDetail.get(history.orderDetailId) ?? history.orderDetail.createdAt;
+        return (history.createdAt.getTime() - start.getTime()) / 60_000;
+      })
+      .filter((value) => value > 0 && value <= 120);
+
+    if (minutes.length === 0) {
+      return { avgPrepTime: 0, minPrepTime: 0, maxPrepTime: 0, samples: 0 };
+    }
 
     return {
-      avgPrepTime: Math.round(validTimes.reduce((a, b) => a + b.minutes, 0) / validTimes.length),
-      minPrepTime: Math.round(Math.min(...validTimes.map((t) => t.minutes))),
-      maxPrepTime: Math.round(Math.max(...validTimes.map((t) => t.minutes))),
-      samples: validTimes.length,
+      avgPrepTime: Math.round(minutes.reduce((sum, value) => sum + value, 0) / minutes.length),
+      minPrepTime: Math.round(Math.min(...minutes)),
+      maxPrepTime: Math.round(Math.max(...minutes)),
+      samples: minutes.length,
     };
   }
 }

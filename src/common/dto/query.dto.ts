@@ -74,7 +74,7 @@ export class OrderQueryDto {
   @ApiPropertyOptional({ enum: ['open', 'in_preparation', 'ready', 'served', 'canceled'] })
   @IsOptional()
   @IsIn(['open', 'in_preparation', 'ready', 'served', 'canceled'])
-  status?: string;
+  status?: 'open' | 'in_preparation' | 'ready' | 'served' | 'canceled';
 }
 
 export class ProductQueryDto {

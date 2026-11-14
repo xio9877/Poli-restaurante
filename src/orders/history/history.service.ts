@@ -10,24 +10,33 @@ export class HistoryService {
   }
 
   async getOrderStateHistory(orderId: number) {
-    return this.client.orderStateHistory.findMany({ where: { orderId } });
+    return this.client.orderStateHistory.findMany({
+      where: { orderId },
+      orderBy: { createdAt: 'asc' },
+      include: { user: true },
+    });
   }
 
   async getDetailStateHistory(orderDetailId: number) {
-    return this.client.orderDetailStateHistory.findMany({ where: { orderDetailId } });
+    return this.client.orderDetailStateHistory.findMany({
+      where: { orderDetailId },
+      orderBy: { createdAt: 'asc' },
+      include: { user: true },
+    });
   }
 
   async getUserActivity(userId: string, limit = 50) {
+    const safeLimit = Math.min(100, Math.max(1, Math.trunc(Number(limit) || 50)));
     const [orderHistory, detailHistory] = await Promise.all([
       this.client.orderStateHistory.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        take: limit,
+        take: safeLimit,
       }),
       this.client.orderDetailStateHistory.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        take: limit,
+        take: safeLimit,
       }),
     ]);
 
