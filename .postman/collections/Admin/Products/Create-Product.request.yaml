@@ -1,0 +1,20 @@
+$kind: http-request
+name: Create Product
+order: 1000
+url: '{{baseUrl}}/admin/products'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "categoryId": 1,
+      "name": "Bandeja Paisa",
+      "description": "Plato típico colombiano",
+      "price": 25000,
+      "status": "available"
+    }

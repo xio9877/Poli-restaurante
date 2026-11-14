@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Product
+order: 4000
+url: '{{baseUrl}}/admin/products/{{productId}}'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Bandeja Paisa Actualizada",
+      "price": 27000
+    }

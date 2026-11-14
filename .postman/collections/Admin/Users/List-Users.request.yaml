@@ -1,0 +1,13 @@
+$kind: http-request
+name: List Users
+order: 2000
+url: '{{baseUrl}}/admin/users?page=1&limit=10'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+queryParams:
+  - key: page
+    value: '1'
+  - key: limit
+    value: '10'

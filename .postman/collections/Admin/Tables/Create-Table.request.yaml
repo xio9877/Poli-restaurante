@@ -1,0 +1,17 @@
+$kind: http-request
+name: Create Table
+order: 1000
+url: '{{baseUrl}}/admin/tables'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Mesa 1",
+      "description": "Mesa junto a la ventana"
+    }

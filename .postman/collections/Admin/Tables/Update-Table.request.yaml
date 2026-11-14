@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Table
+order: 4000
+url: '{{baseUrl}}/admin/tables/{{tableId}}'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Mesa 1 - VIP",
+      "description": "Mesa VIP junto a la ventana"
+    }

@@ -1,0 +1,19 @@
+$kind: http-request
+name: Create User
+order: 1000
+url: '{{baseUrl}}/admin/users'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Juan Pérez",
+      "username": "juan.perez",
+      "role": "waiter",
+      "authUserId": "auth-user-uuid-from-supabase"
+    }
