@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update User
+order: 1040
+url: '{{baseUrl}}/users/{{userId}}'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "María García Actualizada",
+      "role": "admin"
+    }

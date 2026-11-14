@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get User by ID
+order: 1030
+url: '{{baseUrl}}/users/{{userId}}'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Users by Role
+order: 1020
+url: '{{baseUrl}}/users/role/waiter'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
