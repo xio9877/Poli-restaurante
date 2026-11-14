@@ -12,7 +12,11 @@ import {
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { SupabaseAuthGuard } from '@/auth/supabase-auth.guard';
-import { CreatePaymentDto, ProcessPaymentDto } from './dto/process-payment.dto';
+import {
+  CreatePaymentDto,
+  ProcessPaymentDto,
+  UpdatePaymentStatusDto,
+} from './dto/process-payment.dto';
 
 @Controller('payments')
 @UseGuards(SupabaseAuthGuard)
@@ -32,10 +36,9 @@ export class PaymentsController {
   @Patch('invoice/:invoiceId/status')
   async updateStatus(
     @Param('invoiceId', ParseIntPipe) invoiceId: number,
-    @Body('status') status: string,
-    @Body('notes') notes?: string
+    @Body() dto: UpdatePaymentStatusDto
   ) {
-    return this.paymentsService.updateStatus(invoiceId, status, notes);
+    return this.paymentsService.updateStatus(invoiceId, dto.status, dto.notes);
   }
 
   @Post('invoice/:invoiceId/process')

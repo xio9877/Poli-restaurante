@@ -25,3 +25,12 @@ export class CreatePaymentDto extends ProcessPaymentDto {
   @IsIn(['pending'])
   status?: string;
 }
+
+export class UpdatePaymentStatusDto {
+  @IsIn(['pending', 'failed'])
+  status: string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}

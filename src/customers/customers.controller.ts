@@ -12,12 +12,13 @@ import {
 } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { SupabaseAuthGuard } from '@/auth/supabase-auth.guard';
-import { PaginatedResultDto } from '@/common/dto/pagination.dto';
 import { BaseQueryDto } from '@/common/dto/query.dto';
 import {
   CreateCustomerAddressDto,
   CreateCustomerDto,
   CreateCustomerWithAddressDto,
+  UpdateCustomerAddressDto,
+  UpdateCustomerDto,
 } from './dto/customer.dto';
 
 @Controller('customers')
@@ -36,31 +37,8 @@ export class CustomersController {
   }
 
   @Get()
-  async findAll(@Query() query: BaseQueryDto): Promise<PaginatedResultDto<any>> {
-    const { page = 1, limit = 20, search, orderBy = 'createdAt', orderDir = 'desc' } = query;
-    const skip = (page - 1) * limit;
-
-    const where: any = {};
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { username: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    const [data, total] = await Promise.all([
-      this.customersService['client'].customer.findMany({
-        where,
-        orderBy: { [orderBy]: orderDir },
-        skip,
-        take: limit,
-        include: { addresses: true },
-      }),
-      this.customersService['client'].customer.count({ where }),
-    ]);
-
-    return new PaginatedResultDto(data, total, page, limit);
+  async findAll(@Query() query: BaseQueryDto) {
+    return this.customersService.findPage(query);
   }
 
   @Get(':id')
@@ -74,10 +52,7 @@ export class CustomersController {
   }
 
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: Partial<{ name: string; username: string; phone: string }>
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateCustomerDto) {
     return this.customersService.update(id, dto);
   }
 
@@ -99,7 +74,7 @@ export class CustomersController {
   @Patch('addresses/:addressId')
   async updateAddress(
     @Param('addressId', ParseIntPipe) addressId: number,
-    @Body() dto: Partial<{ label: string; address: string; additionalInfo: string }>
+    @Body() dto: UpdateCustomerAddressDto
   ) {
     return this.customersService.updateAddress(addressId, dto);
   }

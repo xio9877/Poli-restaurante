@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { PaginatedResultDto } from '@/common/dto/pagination.dto';
 import { OrderQueryDto } from '@/common/dto/query.dto';
@@ -153,9 +158,15 @@ export class OrdersService {
 
   async updateStatus(id: number, status: OrderStatus, userId: string, notes?: string) {
     await this.client.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id } });
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: { invoice: { include: { payment: true } } },
+      });
       if (!order) throw new NotFoundException('Order not found');
       if (order.status === status) return;
+      if (status === 'canceled' && order.invoice?.payment?.status === 'completed') {
+        throw new ConflictException('A paid order cannot be canceled');
+      }
 
       const transitions: Record<string, string[]> = {
         open: ['in_preparation', 'canceled'],
@@ -238,6 +249,13 @@ export class OrdersService {
         data: { orderId: id, userId, oldState: order.status, newState: status, notes },
       });
 
+      if (status === 'canceled' && order.invoice && order.invoice.status !== 'canceled') {
+        await tx.invoice.update({
+          where: { id: order.invoice.id },
+          data: { status: 'canceled' },
+        });
+      }
+
       if (status === 'canceled' || status === 'served') {
         const dineIn = await tx.dineInOrder.findUnique({ where: { orderId: id } });
         if (dineIn) {
@@ -253,10 +271,23 @@ export class OrdersService {
   }
 
   async delete(id: number) {
-    const order = await this.client.order.findUnique({ where: { id } });
-    if (!order) throw new NotFoundException('Order not found');
-
     return this.client.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: { invoice: { include: { payment: true } } },
+      });
+      if (!order) throw new NotFoundException('Order not found');
+      if (order.invoice?.payment?.status === 'completed') {
+        throw new ConflictException('A paid order cannot be deleted');
+      }
+
+      const dineIn = await tx.dineInOrder.findUnique({ where: { orderId: id } });
+      if (dineIn) {
+        await tx.restaurantTable.update({
+          where: { id: dineIn.tableId },
+          data: { state: 'available' },
+        });
+      }
       await tx.orderDetail.deleteMany({ where: { orderId: id } });
       await tx.orderStateHistory.deleteMany({ where: { orderId: id } });
       await tx.dineInOrder.deleteMany({ where: { orderId: id } });

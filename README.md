@@ -168,6 +168,7 @@ Authorization: Bearer <supabase-jwt>
 ### Dine-In (Protegido)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
+| POST | `/dine-in/orders` | Crear orden con productos y reservar mesa en una transacción |
 | POST | `/dine-in` | Asignar mesa a orden |
 | GET | `/dine-in` | Listar dine-in (paginado) |
 | GET | `/dine-in/:orderId` | Obtener por orden |
@@ -179,7 +180,7 @@ Authorization: Bearer <supabase-jwt>
 |--------|----------|-------------|
 | POST | `/delivery` | Crear orden delivery |
 | POST | `/delivery/orders` | Crear pedido, detalles y domicilio en una transacción |
-| GET | `/delivery` | Listar delivery |
+| GET | `/delivery` | Listar domicilios (paginado, incluye cliente, dirección y orden) |
 | GET | `/delivery/:orderId` | Obtener por orden |
 | GET | `/delivery/status/:status` | Filtrar por estado |
 | GET | `/delivery/domiciliary/:id` | Por domiciliario |
@@ -217,6 +218,7 @@ Authorization: Bearer <supabase-jwt>
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | POST | `/invoices` | Crear factura |
+| POST | `/invoices/issue` | Emitir factura de una orden en una operación |
 | GET | `/invoices` | Listar facturas |
 | GET | `/invoices/:id` | Obtener factura |
 | GET | `/invoices/order/:orderId` | Factura por orden |
@@ -356,14 +358,12 @@ npm run format           # Prettier write
 ## Flujo típico de órdenes
 
 ```
-1. POST /orders          → Crear orden con detalles (status: open)
-2. POST /dine-in         → Asignar mesa (mesa → unavailable)
-3. PATCH /orders/:id/status → in_preparation
-4. Kitchen: PATCH /kitchen/details/:id/status → ready → served
-5. PATCH /orders/:id/status → ready → served
-6. POST /invoices        → Crear factura
-7. POST /payments/invoice/:id/process → Pagar (factura → issued)
-8. Dine-in: mesa → available (auto al served/canceled)
+1. POST /dine-in/orders → Crear orden con detalles (status: open) y reservar mesa
+2. PATCH /orders/:id/status → in_preparation
+3. Kitchen: PATCH /kitchen/details/:id/status → preparar los productos
+4. PATCH /orders/:id/status → ready → served (libera la mesa)
+5. POST /invoices/issue → Emitir factura con los totales guardados de la orden
+6. POST /payments/invoice/:id/process → Registrar el pago recibido (payment: completed)
 ```
 
 ## Roles y permisos

@@ -12,9 +12,14 @@ import {
 } from '@nestjs/common';
 import { DeliveryService } from './delivery.service';
 import { SupabaseAuthGuard } from '@/auth/supabase-auth.guard';
-import { PaginatedResultDto } from '@/common/dto/pagination.dto';
 import { CurrentUserId } from '@/common/decorators/current-user.decorator';
-import { CreateDeliveryOrderDto } from './dto/create-delivery-order.dto';
+import { BaseQueryDto } from '@/common/dto/query.dto';
+import {
+  CreateDeliveryDto,
+  CreateDeliveryOrderDto,
+  UpdateDeliveryDto,
+  UpdateDeliveryStatusDto,
+} from './dto/create-delivery-order.dto';
 
 @Controller('delivery')
 @UseGuards(SupabaseAuthGuard)
@@ -22,7 +27,7 @@ export class DeliveryController {
   constructor(private readonly deliveryService: DeliveryService) {}
 
   @Post()
-  async create(@Body() dto: any) {
+  async create(@Body() dto: CreateDeliveryDto) {
     return this.deliveryService.create(dto);
   }
 
@@ -32,8 +37,8 @@ export class DeliveryController {
   }
 
   @Get()
-  async findAll(): Promise<PaginatedResultDto<any>> {
-    return this.deliveryService.findAll();
+  async findAll(@Query() query: BaseQueryDto) {
+    return this.deliveryService.findAll(query);
   }
 
   @Get(':orderId')
@@ -54,14 +59,13 @@ export class DeliveryController {
   @Patch(':orderId/status')
   async updateStatus(
     @Param('orderId', ParseIntPipe) orderId: number,
-    @Body('status') status: string,
-    @Body('notes') notes?: string
+    @Body() dto: UpdateDeliveryStatusDto
   ) {
-    return this.deliveryService.updateStatus(orderId, status, notes);
+    return this.deliveryService.updateStatus(orderId, dto.status, dto.notes);
   }
 
   @Patch(':orderId')
-  async update(@Param('orderId', ParseIntPipe) orderId: number, @Body() dto: any) {
+  async update(@Param('orderId', ParseIntPipe) orderId: number, @Body() dto: UpdateDeliveryDto) {
     return this.deliveryService.update(orderId, dto);
   }
 

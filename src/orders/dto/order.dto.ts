@@ -49,6 +49,11 @@ export class CreateDineInOrderDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOrderDetailDto)
   details: CreateOrderDetailDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class UpdateOrderStatusDto {
