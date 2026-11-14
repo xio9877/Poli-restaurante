@@ -257,6 +257,13 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
 
     return this.client.$transaction(async (tx) => {
+      const dineIn = await tx.dineInOrder.findUnique({ where: { orderId: id } });
+      if (dineIn) {
+        await tx.restaurantTable.update({
+          where: { id: dineIn.tableId },
+          data: { state: 'available' },
+        });
+      }
       await tx.orderDetail.deleteMany({ where: { orderId: id } });
       await tx.orderStateHistory.deleteMany({ where: { orderId: id } });
       await tx.dineInOrder.deleteMany({ where: { orderId: id } });

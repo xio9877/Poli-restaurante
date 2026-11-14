@@ -14,12 +14,19 @@ import { DineInService } from './dine-in.service';
 import { SupabaseAuthGuard } from '@/auth/supabase-auth.guard';
 import { CurrentUserId } from '@/common/decorators/current-user.decorator';
 import { PaginatedResultDto } from '@/common/dto/pagination.dto';
+import { BaseQueryDto } from '@/common/dto/query.dto';
 import { CreateDineInDto, UpdateDineInDto } from './dto/dine-in.dto';
+import { CreateDineInOrderDto } from '../dto/order.dto';
 
 @Controller('dine-in')
 @UseGuards(SupabaseAuthGuard)
 export class DineInController {
   constructor(private readonly dineInService: DineInService) {}
+
+  @Post('orders')
+  async createOrder(@Body() dto: CreateDineInOrderDto, @CurrentUserId() userId: string) {
+    return this.dineInService.createOrder(dto, userId);
+  }
 
   @Post()
   async create(@Body() dto: CreateDineInDto, @CurrentUserId() userId: string) {
@@ -27,7 +34,7 @@ export class DineInController {
   }
 
   @Get()
-  async findAll(@Query() query: any): Promise<PaginatedResultDto<any>> {
+  async findAll(@Query() query: BaseQueryDto): Promise<PaginatedResultDto<any>> {
     return this.dineInService.findAll(query);
   }
 
