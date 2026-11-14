@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Detail
+order: 5000
+url: '{{baseUrl}}/orders/{{orderId}}/details/{{detailId}}'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": 3,
+      "notes": "Sin cebolla"
+    }

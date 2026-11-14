@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Detail
+order: 3000
+url: '{{baseUrl}}/orders/{{orderId}}/details/{{detailId}}'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

@@ -1,0 +1,18 @@
+$kind: http-request
+name: Add Detail
+order: 1000
+url: '{{baseUrl}}/orders/{{orderId}}/details'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "productId": 5,
+      "amount": 2,
+      "notes": "Extra picante"
+    }
