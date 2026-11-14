@@ -229,6 +229,8 @@ Alpine.data('orders', () => ({
     { value: 'canceled', label: 'Canceladas' },
   ],
   selectedOrder: { details: [] },
+  availableProducts: [],
+  detailForm: { productId: '', amount: 1 },
   showModal: false,
   get filteredOrders() {
     return this.filter === 'all'
@@ -436,17 +438,75 @@ Alpine.data('orders', () => ({
   },
   async viewOrder(order) {
     try {
-      const res = await this.$store.api.get(`/orders/${order.id}`);
-      this.selectedOrder = responseValue(res) || { ...order, details: [] };
+      const [orderRes, productsRes] = await Promise.all([
+        this.$store.api.get(`/orders/${order.id}`),
+        this.$store.api.get('/products?status=available&limit=100'),
+      ]);
+      this.selectedOrder = responseValue(orderRes) || { ...order, details: [] };
       this.selectedOrder.details ||= [];
+      this.availableProducts = responseItems(productsRes);
+      this.detailForm = { productId: '', amount: 1 };
       this.showModal = true;
     } catch (e) {
       this.$store.ui.showToast('Error cargando el detalle de la orden', 'error');
     }
   },
+  async refreshSelectedOrder() {
+    const res = await this.$store.api.get(`/orders/${this.selectedOrder.id}`);
+    this.selectedOrder = responseValue(res) || this.selectedOrder;
+    await this.load();
+  },
+  async addDetail() {
+    const productId = Number(this.detailForm.productId);
+    const amount = Number(this.detailForm.amount);
+    if (!Number.isInteger(productId) || productId < 1 || !Number.isInteger(amount) || amount < 1) {
+      this.$store.ui.showToast('Selecciona un producto y una cantidad válida', 'warning');
+      return;
+    }
+
+    try {
+      await this.$store.api.post(`/orders/${this.selectedOrder.id}/details`, { productId, amount });
+      this.detailForm = { productId: '', amount: 1 };
+      await this.refreshSelectedOrder();
+      this.$store.ui.showToast('Producto agregado a la orden', 'success');
+    } catch (e) {
+      this.$store.ui.showToast('No se pudo agregar el producto', 'error');
+    }
+  },
+  async updateDetailAmount(detail, value) {
+    const amount = Number(value);
+    if (!Number.isInteger(amount) || amount < 1) {
+      this.$store.ui.showToast('La cantidad debe ser un entero mayor que cero', 'warning');
+      await this.refreshSelectedOrder();
+      return;
+    }
+
+    try {
+      await this.$store.api.patch(`/orders/${this.selectedOrder.id}/details/${detail.id}`, {
+        amount,
+      });
+      await this.refreshSelectedOrder();
+      this.$store.ui.showToast('Cantidad actualizada', 'success');
+    } catch (e) {
+      this.$store.ui.showToast('No se pudo actualizar la cantidad', 'error');
+      await this.refreshSelectedOrder();
+    }
+  },
+  async removeDetail(detail) {
+    if (!this.$store.ui.confirm(`¿Quitar ${detail.product?.name || 'este producto'} de la orden?`))
+      return;
+    try {
+      await this.$store.api.delete(`/orders/${this.selectedOrder.id}/details/${detail.id}`);
+      await this.refreshSelectedOrder();
+      this.$store.ui.showToast('Producto eliminado de la orden', 'success');
+    } catch (e) {
+      this.$store.ui.showToast('No se pudo quitar el producto', 'error');
+    }
+  },
   closeModal() {
     this.showModal = false;
     this.selectedOrder = { details: [] };
+    this.availableProducts = [];
   },
   async updateStatus(order, status) {
     try {

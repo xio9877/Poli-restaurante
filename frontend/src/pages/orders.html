@@ -137,7 +137,7 @@
                       ></path>
                     </svg>
                   </button>
-                  <template x-if="order.status === 'open' || order.status === 'in_preparation'">
+                  <template x-if="order.status === 'open'">
                     <button
                       @click="updateStatus(order, 'in_preparation')"
                       class="btn-icon text-primary-600 hover:bg-primary-50"
@@ -152,6 +152,8 @@
                         ></path>
                       </svg>
                     </button>
+                  </template>
+                  <template x-if="order.status === 'in_preparation'">
                     <button
                       @click="updateStatus(order, 'ready')"
                       class="btn-icon text-purple-600 hover:bg-purple-50"
@@ -183,20 +185,24 @@
                       </svg>
                     </button>
                   </template>
-                  <button
-                    @click="updateStatus(order, 'canceled')"
-                    class="btn-icon text-red-600 hover:bg-red-50"
-                    title="Cancelar"
+                  <template
+                    x-if="order.status === 'open' || order.status === 'in_preparation' || order.status === 'ready'"
                   >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      ></path>
-                    </svg>
-                  </button>
+                    <button
+                      @click="updateStatus(order, 'canceled')"
+                      class="btn-icon text-red-600 hover:bg-red-50"
+                      title="Cancelar"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        ></path>
+                      </svg>
+                    </button>
+                  </template>
                 </div>
               </td>
             </tr>
@@ -514,11 +520,36 @@
 
           <div class="border-t border-dark-200 pt-4">
             <h4 class="font-semibold text-dark-900 mb-3">Productos</h4>
+            <template x-if="selectedOrder.status === 'open'">
+              <div class="mb-3 grid grid-cols-1 sm:grid-cols-[1fr_100px_auto] gap-2">
+                <select x-model="detailForm.productId" class="input">
+                  <option value="">Agregar producto...</option>
+                  <template x-for="product in availableProducts" :key="product.id">
+                    <option
+                      :value="product.id"
+                      x-text="product.name + ' · ' + $store.formatters.currency(product.price)"
+                    ></option>
+                  </template>
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  x-model.number="detailForm.amount"
+                  class="input"
+                  aria-label="Cantidad"
+                />
+                <button @click="addDetail()" class="btn-secondary">Agregar</button>
+              </div>
+            </template>
             <div class="divide-y divide-dark-100">
               <template x-for="detail in selectedOrder.details" :key="detail.id">
                 <div class="py-3 flex items-center justify-between">
                   <div class="flex-1">
-                    <p class="font-medium text-dark-900" x-text="detail.product.name"></p>
+                    <p
+                      class="font-medium text-dark-900"
+                      x-text="detail.product?.name || 'Producto'"
+                    ></p>
                     <p
                       class="text-sm text-dark-500"
                       x-text="detail.amount + ' x ' + $store.formatters.currency(detail.unitPrice)"
@@ -540,10 +571,59 @@
                       :class="$store.formatters.detailStateClass(detail.state)"
                       x-text="$store.formatters.detailState(detail.state)"
                     ></span>
+                    <template x-if="selectedOrder.status === 'open'">
+                      <div class="mt-2 flex items-center justify-end gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          :value="detail.amount"
+                          @change="updateDetailAmount(detail, $event.target.value)"
+                          class="input w-20 py-1"
+                          :aria-label="'Cantidad de ' + (detail.product?.name || 'producto')"
+                        />
+                        <button
+                          @click="removeDetail(detail)"
+                          class="text-xs text-red-600 hover:text-red-800"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </template>
+              <p x-show="selectedOrder.details.length === 0" class="py-6 text-center text-dark-500">
+                No hay productos en esta orden.
+              </p>
             </div>
+          </div>
+
+          <div class="border-t border-dark-200 pt-4">
+            <h4 class="font-semibold text-dark-900 mb-3">Historial de la orden</h4>
+            <ol class="space-y-3">
+              <template x-for="entry in selectedOrder.stateHistory || []" :key="entry.id">
+                <li class="flex items-start gap-3 text-sm">
+                  <span class="mt-1 h-2 w-2 rounded-full bg-primary-500" aria-hidden="true"></span>
+                  <div class="flex-1">
+                    <p class="font-medium text-dark-800">
+                      <span x-text="$store.formatters.orderStatus(entry.newState)"></span>
+                      <span class="text-dark-500" x-show="entry.user?.name">
+                        · <span x-text="entry.user.name"></span>
+                      </span>
+                    </p>
+                    <p
+                      class="text-xs text-dark-500"
+                      x-text="$store.formatters.dateTime(entry.createdAt)"
+                    ></p>
+                    <p x-show="entry.notes" class="mt-1 text-dark-600" x-text="entry.notes"></p>
+                  </div>
+                </li>
+              </template>
+              <li x-show="!selectedOrder.stateHistory?.length" class="text-sm text-dark-500">
+                No hay cambios registrados.
+              </li>
+            </ol>
           </div>
 
           <template x-if="selectedOrder.invoice">
@@ -576,20 +656,20 @@
           </template>
         </div>
         <div class="p-5 border-t border-dark-200 flex justify-end gap-3 bg-white">
-          <template
-            x-if="selectedOrder.status === 'open' || selectedOrder.status === 'in_preparation'"
-          >
+          <template x-if="selectedOrder.status === 'open'">
             <button
               @click="updateStatus(selectedOrder, 'in_preparation')"
               class="btn-secondary text-sm"
             >
-              En Preparación
+              Iniciar preparación
             </button>
+          </template>
+          <template x-if="selectedOrder.status === 'in_preparation'">
             <button
               @click="updateStatus(selectedOrder, 'ready')"
               class="btn-primary text-sm bg-purple-600 hover:bg-purple-700"
             >
-              Marcar Lista
+              Marcar lista
             </button>
           </template>
           <template x-if="selectedOrder.status === 'ready'">
@@ -600,9 +680,13 @@
               Servir
             </button>
           </template>
-          <button @click="updateStatus(selectedOrder, 'canceled')" class="btn-danger text-sm">
-            Cancelar
-          </button>
+          <template
+            x-if="selectedOrder.status === 'open' || selectedOrder.status === 'in_preparation' || selectedOrder.status === 'ready'"
+          >
+            <button @click="updateStatus(selectedOrder, 'canceled')" class="btn-danger text-sm">
+              Cancelar
+            </button>
+          </template>
         </div>
       </div>
     </div>
