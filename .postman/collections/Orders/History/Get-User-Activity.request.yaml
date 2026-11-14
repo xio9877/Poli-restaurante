@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get User Activity
+order: 1020
+url: '{{baseUrl}}/orders/history/user/{{userId}}?limit=50'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

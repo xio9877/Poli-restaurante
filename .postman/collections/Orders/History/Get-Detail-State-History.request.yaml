@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Order Detail State History
+order: 1010
+url: '{{baseUrl}}/orders/history/detail/{{detailId}}'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
