@@ -68,6 +68,10 @@ const responseItems = (response) => {
 };
 
 const responseValue = (response) => response?.data?.data ?? response?.data;
+const apiErrorMessage = (error, fallback) => {
+  const message = error?.response?.data?.message;
+  return (Array.isArray(message) ? message.join(', ') : message) || fallback;
+};
 
 // Dashboard component
 Alpine.data('dashboard', () => ({
@@ -252,11 +256,92 @@ Alpine.data('orders', () => ({
     }
   },
   createWalkInOrder() {
-    this.$store.ui.showToast('Selecciona una mesa para iniciar una orden', 'info');
-    this.$store.router.navigate('/tables');
+    this.showDineInModal = true;
+    this.dineInLoading = true;
+    this.dineInDetails = [];
+    this.dineInForm = { tableId: '', guestCount: 1, notes: '' };
+    Promise.all([
+      this.$store.api.get('/tables/available'),
+      this.$store.api.get('/products?status=available&limit=100'),
+    ])
+      .then(([tablesRes, productsRes]) => {
+        this.availableTables = responseItems(tablesRes);
+        this.availableProducts = responseItems(productsRes);
+        this.dineInForm.tableId = this.availableTables[0]?.id || '';
+      })
+      .catch((error) => {
+        this.$store.ui.showToast(
+          apiErrorMessage(error, 'Error cargando mesas y productos'),
+          'error'
+        );
+      })
+      .finally(() => {
+        this.dineInLoading = false;
+      });
+  },
+  showDineInModal: false,
+  dineInLoading: false,
+  dineInSaving: false,
+  availableTables: [],
+  dineInProductId: '',
+  dineInProductAmount: 1,
+  dineInDetails: [],
+  dineInForm: { tableId: '', guestCount: 1, notes: '' },
+  get dineInTotal() {
+    const subtotal = this.dineInDetails.reduce(
+      (sum, detail) => sum + detail.amount * detail.unitPrice,
+      0
+    );
+    return subtotal * 1.19;
+  },
+  closeDineInModal() {
+    if (this.dineInSaving) return;
+    this.showDineInModal = false;
+  },
+  addDineInDetail() {
+    const product = this.availableProducts.find((item) => item.id === Number(this.dineInProductId));
+    const amount = Number(this.dineInProductAmount);
+    if (!product || !Number.isInteger(amount) || amount < 1) {
+      this.$store.ui.showToast('Selecciona un producto y una cantidad válida', 'warning');
+      return;
+    }
+    const existing = this.dineInDetails.find((detail) => detail.productId === product.id);
+    if (existing) existing.amount += amount;
+    else
+      this.dineInDetails.push({
+        productId: product.id,
+        amount,
+        name: product.name,
+        unitPrice: Number(product.price),
+      });
+    this.dineInProductId = '';
+    this.dineInProductAmount = 1;
+  },
+  async saveDineInOrder() {
+    if (!this.dineInForm.tableId || !this.dineInDetails.length || this.dineInSaving) {
+      this.$store.ui.showToast('Selecciona una mesa y agrega al menos un producto', 'warning');
+      return;
+    }
+    this.dineInSaving = true;
+    try {
+      await this.$store.api.post('/dine-in/orders', {
+        tableId: Number(this.dineInForm.tableId),
+        guestCount: Number(this.dineInForm.guestCount),
+        notes: this.dineInForm.notes || undefined,
+        details: this.dineInDetails.map(({ productId, amount }) => ({ productId, amount })),
+      });
+      this.showDineInModal = false;
+      this.$store.ui.showToast('Orden en mesa creada', 'success');
+      await this.load();
+    } catch (error) {
+      this.$store.ui.showToast(apiErrorMessage(error, 'Error creando la orden en mesa'), 'error');
+    } finally {
+      this.dineInSaving = false;
+    }
   },
   showDeliveryModal: false,
   deliveryLoading: false,
+  deliverySaving: false,
   showQuickCustomerForm: false,
   showQuickAddressForm: false,
   customers: [],
@@ -300,7 +385,10 @@ Alpine.data('orders', () => ({
         await this.loadDeliveryAddresses();
       }
     } catch (e) {
-      this.$store.ui.showToast('Error cargando datos para el domicilio', 'error');
+      this.$store.ui.showToast(
+        apiErrorMessage(e, 'Error cargando datos para el domicilio'),
+        'error'
+      );
     } finally {
       this.deliveryLoading = false;
     }
@@ -321,7 +409,10 @@ Alpine.data('orders', () => ({
       this.deliveryAddresses = responseItems(res);
       this.deliveryForm.addressId = this.deliveryAddresses[0]?.id || '';
     } catch (e) {
-      this.$store.ui.showToast('Error cargando direcciones del cliente', 'error');
+      this.$store.ui.showToast(
+        apiErrorMessage(e, 'Error cargando direcciones del cliente'),
+        'error'
+      );
     }
   },
   async saveQuickCustomer() {
@@ -362,7 +453,7 @@ Alpine.data('orders', () => ({
       this.$store.ui.showToast('Cliente creado', 'success');
     } catch (e) {
       this.$store.ui.showToast(
-        'No se pudo crear el cliente; verifica que el correo/identificador no exista',
+        apiErrorMessage(e, 'No se pudo crear el cliente; verifica sus datos'),
         'error'
       );
     }
@@ -380,7 +471,7 @@ Alpine.data('orders', () => ({
       this.showQuickAddressForm = false;
       this.$store.ui.showToast('Dirección agregada al cliente', 'success');
     } catch (e) {
-      this.$store.ui.showToast('Error creando la dirección', 'error');
+      this.$store.ui.showToast(apiErrorMessage(e, 'Error creando la dirección'), 'error');
     }
   },
   addDeliveryDetail() {
@@ -412,7 +503,8 @@ Alpine.data('orders', () => ({
       !this.selectedCustomerId ||
       !this.deliveryForm.addressId ||
       !this.deliveryForm.domiciliaryId ||
-      !this.deliveryDetails.length
+      !this.deliveryDetails.length ||
+      this.deliverySaving
     ) {
       this.$store.ui.showToast(
         'Selecciona cliente, dirección, domiciliario y al menos un producto',
@@ -420,6 +512,7 @@ Alpine.data('orders', () => ({
       );
       return;
     }
+    this.deliverySaving = true;
     try {
       await this.$store.api.post('/delivery/orders', {
         customerId: this.selectedCustomerId,
@@ -433,7 +526,9 @@ Alpine.data('orders', () => ({
       this.closeDeliveryModal();
       await this.load();
     } catch (e) {
-      this.$store.ui.showToast('Error creando la orden a domicilio', 'error');
+      this.$store.ui.showToast(apiErrorMessage(e, 'Error creando la orden a domicilio'), 'error');
+    } finally {
+      this.deliverySaving = false;
     }
   },
   async viewOrder(order) {
@@ -528,6 +623,8 @@ Alpine.data('customers', () => ({
   loading: true,
   showCustomerModal: false,
   showAddressForm: false,
+  editingCustomer: null,
+  editingAddress: null,
   customerForm: {
     name: '',
     username: '',
@@ -563,6 +660,7 @@ Alpine.data('customers', () => ({
     this.showAddressForm = false;
   },
   openCustomerModal() {
+    this.editingCustomer = null;
     this.customerForm = {
       name: '',
       username: '',
@@ -573,10 +671,41 @@ Alpine.data('customers', () => ({
     };
     this.showCustomerModal = true;
   },
+  editCustomer() {
+    if (!this.selected) return;
+    this.editingCustomer = this.selected;
+    this.customerForm = {
+      name: this.selected.name,
+      username: this.selected.username,
+      phone: this.selected.phone,
+      addressLabel: '',
+      address: '',
+      additionalInfo: '',
+    };
+    this.showCustomerModal = true;
+  },
   closeCustomerModal() {
     this.showCustomerModal = false;
   },
   async saveCustomer() {
+    if (this.editingCustomer) {
+      try {
+        await this.$store.api.patch(`/customers/${this.editingCustomer.id}`, {
+          name: this.customerForm.name,
+          username: this.customerForm.username,
+          phone: this.customerForm.phone,
+        });
+        const id = this.editingCustomer.id;
+        this.closeCustomerModal();
+        await this.load();
+        this.selected = this.customers.find((customer) => customer.id === id) || null;
+        this.addresses = this.selected?.addresses || [];
+        this.$store.ui.showToast('Cliente actualizado', 'success');
+      } catch (error) {
+        this.$store.ui.showToast(apiErrorMessage(error, 'Error actualizando el cliente'), 'error');
+      }
+      return;
+    }
     const hasAddress = Boolean(this.customerForm.address.trim());
     if (hasAddress && !this.customerForm.addressLabel.trim()) {
       this.$store.ui.showToast('Escribe una etiqueta para la dirección', 'warning');
@@ -601,21 +730,78 @@ Alpine.data('customers', () => ({
       this.$store.ui.showToast('Cliente creado', 'success');
     } catch (e) {
       this.$store.ui.showToast(
-        'Error creando cliente; verifica que el correo/identificador no exista',
+        apiErrorMessage(e, 'Error creando cliente; verifica sus datos'),
         'error'
       );
     }
   },
   async saveAddress() {
     if (!this.selected) return;
+    const wasEditing = Boolean(this.editingAddress);
     try {
-      await this.$store.api.post(`/customers/${this.selected.id}/addresses`, this.addressForm);
+      if (this.editingAddress) {
+        await this.$store.api.patch(
+          `/customers/addresses/${this.editingAddress.id}`,
+          this.addressForm
+        );
+      } else {
+        await this.$store.api.post(`/customers/${this.selected.id}/addresses`, this.addressForm);
+      }
       this.addressForm = { label: '', address: '', additionalInfo: '' };
+      this.editingAddress = null;
       this.showAddressForm = false;
       await this.load();
-      this.$store.ui.showToast('Dirección creada', 'success');
+      this.$store.ui.showToast(
+        wasEditing ? 'Dirección actualizada' : 'Dirección creada',
+        'success'
+      );
     } catch (e) {
-      this.$store.ui.showToast('Error creando dirección', 'error');
+      this.$store.ui.showToast(apiErrorMessage(e, 'Error guardando la dirección'), 'error');
+    }
+  },
+  editAddress(address) {
+    this.editingAddress = address;
+    this.addressForm = {
+      label: address.label,
+      address: address.address,
+      additionalInfo: address.additionalInfo || '',
+    };
+    this.showAddressForm = true;
+  },
+  cancelAddressForm() {
+    this.showAddressForm = false;
+    this.editingAddress = null;
+    this.addressForm = { label: '', address: '', additionalInfo: '' };
+  },
+  async deleteAddress(address) {
+    if (!window.confirm(`¿Eliminar la dirección "${address.label}"?`)) return;
+    try {
+      await this.$store.api.delete(`/customers/addresses/${address.id}`);
+      await this.load();
+      this.$store.ui.showToast('Dirección eliminada', 'success');
+    } catch (error) {
+      this.$store.ui.showToast(
+        apiErrorMessage(
+          error,
+          'No se pudo eliminar la dirección; puede estar asociada a un pedido'
+        ),
+        'error'
+      );
+    }
+  },
+  async deleteCustomer() {
+    if (!this.selected || !window.confirm(`¿Eliminar a ${this.selected.name}?`)) return;
+    try {
+      await this.$store.api.delete(`/customers/${this.selected.id}`);
+      this.selected = null;
+      this.addresses = [];
+      await this.load();
+      this.$store.ui.showToast('Cliente eliminado', 'success');
+    } catch (error) {
+      this.$store.ui.showToast(
+        apiErrorMessage(error, 'No se pudo eliminar el cliente; puede tener pedidos asociados'),
+        'error'
+      );
     }
   },
 }));
@@ -624,6 +810,7 @@ Alpine.data('billing', () => ({
   orders: [],
   loading: true,
   saving: false,
+  busyInvoiceOrderId: null,
   showPaymentModal: false,
   selectedInvoice: null,
   paymentForm: { method: 'cash', notes: '' },
@@ -642,14 +829,22 @@ Alpine.data('billing', () => ({
     }
   },
   async issueInvoice(order) {
+    if (this.busyInvoiceOrderId === order.id) return;
+    this.busyInvoiceOrderId = order.id;
     try {
-      const res = await this.$store.api.post('/invoices', { orderId: order.id });
+      const res =
+        order.invoice?.status === 'draft'
+          ? await this.$store.api.patch(`/invoices/${order.invoice.id}/status`, {
+              status: 'issued',
+            })
+          : await this.$store.api.post('/invoices/issue', { orderId: order.id });
       const invoice = responseValue(res);
-      await this.$store.api.patch(`/invoices/${invoice.id}/status`, { status: 'issued' });
-      order.invoice = { ...invoice, status: 'issued', payment: null };
+      order.invoice = invoice;
       this.$store.ui.showToast('Factura emitida', 'success');
     } catch (e) {
-      this.$store.ui.showToast('Error emitiendo factura', 'error');
+      this.$store.ui.showToast(apiErrorMessage(e, 'Error emitiendo factura'), 'error');
+    } finally {
+      this.busyInvoiceOrderId = null;
     }
   },
   openPayment(order) {
@@ -681,7 +876,7 @@ Alpine.data('billing', () => ({
       this.closePayment();
       this.$store.ui.showToast('Pago registrado', 'success');
     } catch (e) {
-      this.$store.ui.showToast('No se pudo registrar el pago', 'error');
+      this.$store.ui.showToast(apiErrorMessage(e, 'No se pudo registrar el pago'), 'error');
     } finally {
       this.saving = false;
     }

@@ -75,9 +75,10 @@
               </td>
               <td class="px-4 py-3 text-right">
                 <button
-                  x-show="!order.invoice"
+                  x-show="!order.invoice || order.invoice.status === 'draft'"
                   @click="issueInvoice(order)"
                   class="btn-primary text-sm"
+                  :disabled="busyInvoiceOrderId === order.id"
                 >
                   Emitir factura
                 </button>
