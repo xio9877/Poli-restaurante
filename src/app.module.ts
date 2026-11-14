@@ -8,6 +8,8 @@ import { TablesModule } from './tables/tables.module';
 import { MenuModule } from './menu/menu.module';
 import { OrdersModule } from './orders/orders.module';
 import { BillingModule } from './billing/billing.module';
+import { KitchenModule } from './kitchen/kitchen.module';
+import { AdminModule } from './admin/admin.module';
 import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -23,6 +25,8 @@ import { AppService } from './app.service';
     MenuModule,
     OrdersModule,
     BillingModule,
+    KitchenModule,
+    AdminModule,
     HealthModule,
   ],
   controllers: [AppController],

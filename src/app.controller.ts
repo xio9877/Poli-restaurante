@@ -1,12 +1,20 @@
 import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
-
   @Get()
   getHello(): string {
-    return this.appService.getHello();
+    return 'Poli Restaurante API is running!';
+  }
+
+  @Get('api')
+  getApiInfo() {
+    return {
+      name: 'Poli Restaurante API',
+      version: '1.0.0',
+      description: 'Sistema de gestión de restaurante',
+      swagger: '/api',
+      health: '/health',
+    };
   }
 }
