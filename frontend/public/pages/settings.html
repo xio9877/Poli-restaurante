@@ -1,0 +1,122 @@
+<div class="space-y-6 max-w-3xl" x-data="settings()">
+  <h2 class="text-2xl font-bold text-dark-900">Configuración</h2>
+
+  <div class="card p-6 space-y-6">
+    <p class="text-sm text-dark-500">Esta configuración se guarda en este navegador.</p>
+    <div>
+      <h3 class="font-semibold text-dark-900 mb-4">Información del Restaurante</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="label">Nombre</label>
+          <input type="text" x-model="form.name" class="input" value="Poli Restaurante" />
+        </div>
+        <div>
+          <label class="label">Teléfono</label>
+          <input type="text" x-model="form.phone" class="input" value="+57 1 234 5678" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="label">Dirección</label>
+          <input
+            type="text"
+            x-model="form.address"
+            class="input"
+            value="Calle 123 #45-67, Bogotá"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="border-t border-dark-200 pt-6">
+      <h3 class="font-semibold text-dark-900 mb-4">Configuración de Pedidos</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="label">IVA (%)</label>
+          <input
+            type="number"
+            x-model.number="form.taxRate"
+            min="0"
+            max="100"
+            step="0.01"
+            class="input"
+            value="19"
+          />
+        </div>
+        <div>
+          <label class="label">Moneda</label>
+          <select x-model="form.currency" class="input">
+            <option value="COP">COP - Peso Colombiano</option>
+            <option value="USD">USD - Dólar Americano</option>
+            <option value="EUR">EUR - Euro</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="border-t border-dark-200 pt-6">
+      <h3 class="font-semibold text-dark-900 mb-4">Impresoras / Hardware</h3>
+      <div class="space-y-3">
+        <label class="flex items-center gap-3 p-3 bg-dark-50 rounded-lg cursor-pointer">
+          <input
+            type="checkbox"
+            x-model="form.printerKitchen"
+            class="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span class="text-dark-700">Impresora de cocina (USB)</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 bg-dark-50 rounded-lg cursor-pointer">
+          <input
+            type="checkbox"
+            x-model="form.printerReceipt"
+            class="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span class="text-dark-700">Impresora de facturas (Bluetooth)</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 bg-dark-50 rounded-lg cursor-pointer">
+          <input
+            type="checkbox"
+            x-model="form.kdsScreen"
+            class="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span class="text-dark-700">Pantalla de comandas (KDS)</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="border-t border-dark-200 pt-6">
+      <h3 class="font-semibold text-dark-900 mb-4">Notificaciones</h3>
+      <div class="space-y-3">
+        <label class="flex items-center gap-3 p-3 bg-dark-50 rounded-lg cursor-pointer">
+          <input
+            type="checkbox"
+            x-model="form.notifyNewOrder"
+            class="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+            checked
+          />
+          <span class="text-dark-700">Nueva orden recibida</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 bg-dark-50 rounded-lg cursor-pointer">
+          <input
+            type="checkbox"
+            x-model="form.notifyOrderReady"
+            class="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+            checked
+          />
+          <span class="text-dark-700">Orden lista para servir</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 bg-dark-50 rounded-lg cursor-pointer">
+          <input
+            type="checkbox"
+            x-model="form.notifyLowStock"
+            class="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+            checked
+          />
+          <span class="text-dark-700">Stock bajo de productos</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="border-t border-dark-200 pt-6">
+      <button @click="save()" class="btn-primary">Guardar Cambios</button>
+    </div>
+  </div>
+</div>
