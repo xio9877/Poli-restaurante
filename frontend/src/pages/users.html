@@ -1,0 +1,164 @@
+<div class="space-y-6" x-data="users()">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <h2 class="text-2xl font-bold text-dark-900">Usuarios del Sistema</h2>
+    <button @click="openModal()" class="btn-primary">+ Nuevo Usuario</button>
+  </div>
+
+  <div class="card">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-dark-50">
+          <tr>
+            <th
+              class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+            >
+              Usuario
+            </th>
+            <th
+              class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+            >
+              Rol
+            </th>
+            <th
+              class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+            >
+              Email
+            </th>
+            <th
+              class="px-4 py-3 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider"
+            >
+              Creado
+            </th>
+            <th
+              class="px-4 py-3 text-right text-xs font-semibold text-dark-600 uppercase tracking-wider"
+            >
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-dark-100">
+          <template x-for="user in users" :key="user.id">
+            <tr class="hover:bg-dark-50">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium"
+                    x-text="user.name.charAt(0).toUpperCase()"
+                  ></div>
+                  <p class="font-medium text-dark-900" x-text="user.name"></p>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  class="badge"
+                  :class="$store.formatters.roleClass(user.role)"
+                  x-text="$store.formatters.roleLabel(user.role)"
+                ></span>
+              </td>
+              <td class="px-4 py-3 text-dark-600" x-text="user.username"></td>
+              <td
+                class="px-4 py-3 text-sm text-dark-500"
+                x-text="$store.formatters.date(user.createdAt)"
+              ></td>
+              <td class="px-4 py-3 text-right">
+                <button
+                  @click="openModal(user)"
+                  class="p-2 rounded-lg text-dark-500 hover:text-dark-700 hover:bg-dark-100"
+                  title="Editar"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    ></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div
+    x-show="showModal"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-50 overflow-y-auto"
+    @click.self="closeModal()"
+  >
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative w-full max-w-md bg-white rounded-xl shadow-xl">
+        <div class="p-5 border-b border-dark-200 flex items-center justify-between">
+          <h3
+            class="text-lg font-semibold text-dark-900"
+            x-text="editing ? 'Editar Usuario' : 'Nuevo Usuario'"
+          ></h3>
+          <button @click="closeModal()" class="text-dark-400 hover:text-dark-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="save()" class="p-5 space-y-4">
+          <input type="hidden" x-model="form.id" />
+          <div>
+            <label class="label">Nombre *</label>
+            <input
+              type="text"
+              x-model="form.name"
+              required
+              class="input"
+              placeholder="Juan Pérez"
+            />
+          </div>
+          <div>
+            <label class="label">Email / Username *</label>
+            <input
+              type="email"
+              x-model="form.username"
+              required
+              class="input"
+              placeholder="juan@restaurante.com"
+            />
+          </div>
+          <div>
+            <label class="label">Rol *</label>
+            <select x-model="form.role" required class="input">
+              <option value="waiter">Mesero</option>
+              <option value="kitchen">Cocina</option>
+              <option value="cashier">Cajero</option>
+              <option value="domiciliary">Domiciliario</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <p x-show="!editing" class="text-sm text-dark-500">
+            La cuenta de acceso debe existir previamente en el proveedor de autenticación.
+          </p>
+          <div class="flex gap-3 pt-4">
+            <button type="button" @click="closeModal()" class="flex-1 btn-secondary">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="flex-1 btn-primary"
+              x-text="editing ? 'Actualizar' : 'Crear'"
+            ></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
