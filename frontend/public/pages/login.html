@@ -1,0 +1,84 @@
+<div
+  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-amber-50 px-4"
+  x-data="loginForm()"
+>
+  <div class="w-full max-w-md">
+    <div class="card p-8">
+      <div class="text-center mb-8">
+        <div
+          class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 text-white text-2xl font-bold mb-4"
+        >
+          PR
+        </div>
+        <h1 class="text-2xl font-bold text-dark-900">Poli Restaurante</h1>
+        <p class="text-dark-500 mt-1">Plataforma de Gestión</p>
+      </div>
+
+      <form @submit.prevent="submit()" class="space-y-5">
+        <div
+          x-show="error"
+          class="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+          x-transition
+        >
+          <p x-text="error"></p>
+        </div>
+
+        <div>
+          <label class="label">Email</label>
+          <input
+            type="email"
+            x-model="form.email"
+            class="input"
+            placeholder="usuario@restaurante.com"
+            autocomplete="email"
+            required
+            @keydown.enter="submit()"
+          />
+        </div>
+
+        <div>
+          <label class="label">Contraseña</label>
+          <input
+            type="password"
+            x-model="form.password"
+            class="input"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+            @keydown.enter="submit()"
+          />
+        </div>
+
+        <button type="submit" :disabled="loading" class="btn-primary w-full py-3">
+          <span x-show="!loading">Iniciar Sesión</span>
+          <span x-show="loading" class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+                fill="none"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
+            </svg>
+            Autenticando...
+          </span>
+        </button>
+      </form>
+
+      <div class="mt-6 pt-6 border-t border-dark-200 text-center text-sm text-dark-500">
+        <p>
+          Demo: <code class="bg-dark-100 px-1.5 py-0.5 rounded">admin@poli.com</code> /
+          <code class="bg-dark-100 px-1.5 py-0.5 rounded">demo123</code>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
