@@ -20,10 +20,16 @@ export class PaymentsService {
     status?: string;
     notes?: string;
   }) {
-    const invoice = await this.client.invoice.findUnique({ where: { id: data.invoiceId } });
+    const invoice = await this.client.invoice.findUnique({
+      where: { id: data.invoiceId },
+      include: { order: true },
+    });
     if (!invoice) throw new NotFoundException('Invoice not found');
     if (invoice.status !== 'issued')
       throw new BadRequestException('Invoice must be issued before payment');
+    if (invoice.order.status === 'canceled') {
+      throw new BadRequestException('A canceled order cannot be paid');
+    }
     if (data.status && data.status !== 'pending') {
       throw new BadRequestException('Use the payment process endpoint to complete a payment');
     }
@@ -72,10 +78,16 @@ export class PaymentsService {
   ) {
     try {
       return await this.client.$transaction(async (tx) => {
-        const invoice = await tx.invoice.findUnique({ where: { id: invoiceId } });
+        const invoice = await tx.invoice.findUnique({
+          where: { id: invoiceId },
+          include: { order: true },
+        });
         if (!invoice) throw new NotFoundException('Invoice not found');
         if (invoice.status !== 'issued')
           throw new BadRequestException('Invoice must be issued before payment');
+        if (invoice.order.status === 'canceled') {
+          throw new BadRequestException('A canceled order cannot be paid');
+        }
         if (Math.round(Number(data.amount) * 100) !== Math.round(Number(invoice.total) * 100)) {
           throw new BadRequestException('Payment amount must match the invoice total');
         }

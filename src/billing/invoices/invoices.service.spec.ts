@@ -1,3 +1,5 @@
+import { BadRequestException, ConflictException } from '@nestjs/common';
+
 jest.mock('../../database/prisma.service', () => ({
   PrismaService: class PrismaService {},
 }));
@@ -44,5 +46,46 @@ describe('InvoicesService', () => {
         }),
       })
     );
+  });
+
+  it('does not issue a draft invoice after its order was canceled', async () => {
+    const tx = {
+      invoice: {
+        findUnique: jest.fn().mockResolvedValue({ id: 9, orderId: 3, status: 'draft' }),
+        update: jest.fn(),
+      },
+      order: { findUnique: jest.fn().mockResolvedValue({ id: 3, status: 'canceled' }) },
+      payment: { findUnique: jest.fn() },
+    };
+    const client = {
+      $transaction: jest.fn((callback: (transaction: typeof tx) => unknown) => callback(tx)),
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [InvoicesService, { provide: PrismaService, useValue: { client } }],
+    }).compile();
+    const service = module.get(InvoicesService);
+
+    await expect(service.updateStatus(9, 'issued')).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+  });
+
+  it('preserves completed payment records when deleting an invoice', async () => {
+    const tx = {
+      invoice: {
+        findUnique: jest.fn().mockResolvedValue({ id: 9, status: 'issued' }),
+        delete: jest.fn(),
+      },
+      payment: { findUnique: jest.fn().mockResolvedValue({ status: 'completed' }) },
+    };
+    const client = {
+      $transaction: jest.fn((callback: (transaction: typeof tx) => unknown) => callback(tx)),
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [InvoicesService, { provide: PrismaService, useValue: { client } }],
+    }).compile();
+    const service = module.get(InvoicesService);
+
+    await expect(service.delete(9)).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.invoice.delete).not.toHaveBeenCalled();
   });
 });

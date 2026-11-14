@@ -37,25 +37,37 @@ export class InvoicesService {
   }
 
   async create(orderId: number, cashierId: string) {
-    const order = await this.client.order.findUnique({ where: { id: orderId } });
-    if (!order) throw new NotFoundException('Order not found');
-    if (order.status === 'canceled') {
-      throw new BadRequestException('A canceled order cannot be invoiced');
-    }
-    const existing = await this.client.invoice.findUnique({ where: { orderId } });
-    if (existing) throw new BadRequestException('An invoice already exists for this order');
+    try {
+      return await this.client.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({ where: { id: orderId } });
+        if (!order) throw new NotFoundException('Order not found');
+        if (order.status === 'canceled') {
+          throw new BadRequestException('A canceled order cannot be invoiced');
+        }
 
-    return this.client.invoice.create({
-      data: {
-        orderId,
-        cashierId,
-        subtotal: order.subtotal,
-        taxRate: order.taxRate,
-        taxAmount: order.taxAmount,
-        total: order.total,
-        status: 'draft',
-      },
-    });
+        return tx.invoice.create({
+          data: {
+            orderId,
+            cashierId,
+            subtotal: order.subtotal,
+            taxRate: order.taxRate,
+            taxAmount: order.taxAmount,
+            total: order.total,
+            status: 'draft',
+          },
+        });
+      });
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('An invoice already exists for this order');
+      }
+      throw error;
+    }
   }
 
   async issue(orderId: number, cashierId: string) {
@@ -108,6 +120,13 @@ export class InvoicesService {
       if (invoice.status === 'canceled' || (invoice.status === 'issued' && status === 'draft')) {
         throw new ConflictException(`Cannot move invoice from ${invoice.status} to ${status}`);
       }
+      if (status === 'issued' && invoice.status === 'draft') {
+        const order = await tx.order.findUnique({ where: { id: invoice.orderId } });
+        if (!order) throw new NotFoundException('Order not found');
+        if (order.status === 'canceled') {
+          throw new BadRequestException('A canceled order cannot be invoiced');
+        }
+      }
       if (status === 'canceled') {
         const payment = await tx.payment.findUnique({ where: { invoiceId: id } });
         if (payment?.status === 'completed') {
@@ -134,6 +153,14 @@ export class InvoicesService {
   }
 
   async delete(id: number) {
-    return this.client.invoice.delete({ where: { id } });
+    return this.client.$transaction(async (tx) => {
+      const invoice = await tx.invoice.findUnique({ where: { id } });
+      if (!invoice) throw new NotFoundException('Invoice not found');
+      const payment = await tx.payment.findUnique({ where: { invoiceId: id } });
+      if (payment?.status === 'completed') {
+        throw new ConflictException('A paid invoice cannot be deleted');
+      }
+      return tx.invoice.delete({ where: { id } });
+    });
   }
 }
