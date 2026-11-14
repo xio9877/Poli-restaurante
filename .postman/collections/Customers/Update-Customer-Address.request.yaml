@@ -1,0 +1,18 @@
+$kind: http-request
+name: Update Customer Address
+order: 1080
+url: '{{baseUrl}}/customers/addresses/{{addressId}}'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "label": "Oficina",
+      "address": "Carrera 78 #90-12",
+      "additionalInfo": "Piso 5"
+    }

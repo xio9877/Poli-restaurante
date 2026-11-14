@@ -1,0 +1,18 @@
+$kind: http-request
+name: Create Customer Address
+order: 1070
+url: '{{baseUrl}}/customers/{{customerId}}/addresses'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "label": "Casa",
+      "address": "Calle 123 #45-67",
+      "additionalInfo": "Apto 301"
+    }

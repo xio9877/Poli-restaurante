@@ -1,0 +1,21 @@
+$kind: http-request
+name: Create Customer With Address
+order: 1010
+url: '{{baseUrl}}/customers/with-address'
+method: POST
+headers:
+  - key: Authorization
+    value: '******'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Juan Pérez",
+      "username": "juan.perez",
+      "phone": "+573001234567",
+      "addressLabel": "Casa",
+      "address": "Calle 123 #45-67",
+      "additionalInfo": "Apto 201"
+    }

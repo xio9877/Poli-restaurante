@@ -1,0 +1,8 @@
+$kind: http-request
+name: List Customers
+order: 1010
+url: '{{baseUrl}}/customers?page=1&limit=20'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

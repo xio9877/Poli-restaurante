@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Customer
+order: 1040
+url: '{{baseUrl}}/customers/{{customerId}}'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Juan Pérez Actualizado",
+      "phone": "+573007654321"
+    }

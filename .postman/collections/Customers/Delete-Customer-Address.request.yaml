@@ -1,0 +1,8 @@
+$kind: http-request
+name: Delete Customer Address
+order: 1090
+url: '{{baseUrl}}/customers/addresses/{{addressId}}'
+method: DELETE
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

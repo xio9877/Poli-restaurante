@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Customer Addresses
+order: 1060
+url: '{{baseUrl}}/customers/{{customerId}}/addresses'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

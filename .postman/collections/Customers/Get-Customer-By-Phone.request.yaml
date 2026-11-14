@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Customer by Phone
+order: 1030
+url: '{{baseUrl}}/customers/phone/+573001234567'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
