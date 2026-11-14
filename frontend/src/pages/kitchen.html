@@ -1,0 +1,205 @@
+<div class="space-y-6" x-data="kitchen()">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <h2 class="text-2xl font-bold text-dark-900">Vista Cocina</h2>
+    <div class="flex gap-2">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          x-model="autoRefresh"
+          class="w-4 h-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+        />
+        <span class="text-sm text-dark-700">Auto-refresh (15s)</span>
+      </label>
+      <button @click="loadData()" class="btn-secondary" :disabled="loading">
+        <svg
+          class="w-5 h-5"
+          x-show="!loading"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          ></path>
+        </svg>
+        <svg
+          class="w-5 h-5 animate-spin"
+          x-show="loading"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div class="xl:col-span-2 space-y-4">
+      <h3 class="font-semibold text-dark-900 flex items-center gap-2">
+        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          ></path>
+        </svg>
+        Pendientes / En Preparación
+        <span class="badge badge-warning" x-text="pendingDetails.length"></span>
+      </h3>
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto scrollbar-thin"
+      >
+        <template x-for="detail in pendingDetails" :key="detail.id">
+          <div
+            class="card p-4 border-l-4"
+            :class="detail.state === 'pending' ? 'border-amber-500' : 'border-blue-500'"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <p class="font-semibold text-dark-900" x-text="detail.product.name"></p>
+                <p class="text-sm text-dark-500">
+                  Cant: <span x-text="detail.amount"></span> | Orden #<span
+                    x-text="detail.orderId"
+                  ></span>
+                </p>
+                <template x-if="detail.tableName">
+                  <p
+                    class="text-xs text-primary-700 bg-primary-50 px-2 py-0.5 rounded inline-block mt-1"
+                    x-text="'Mesa ' + detail.tableName"
+                  ></p>
+                </template>
+              </div>
+              <span
+                class="badge"
+                :class="detail.state === 'pending' ? 'badge-warning' : 'badge-info'"
+                x-text="detail.state === 'pending' ? 'Pendiente' : 'En Preparación'"
+              ></span>
+            </div>
+            <template x-if="detail.notes">
+              <p
+                class="text-sm text-dark-600 bg-dark-50 p-2 rounded mb-3"
+                x-text="detail.notes"
+              ></p>
+            </template>
+            <div class="flex gap-2">
+              <template x-if="detail.state === 'pending'">
+                <button
+                  @click="updateDetail(detail, 'in_preparation')"
+                  class="flex-1 btn-primary text-sm"
+                >
+                  Iniciar
+                </button>
+              </template>
+              <template x-if="detail.state === 'in_preparation'">
+                <button
+                  @click="updateDetail(detail, 'ready')"
+                  class="flex-1 btn-primary text-sm bg-purple-600 hover:bg-purple-700"
+                >
+                  Listo
+                </button>
+              </template>
+              <button
+                @click="updateDetail(detail, 'canceled')"
+                class="btn-secondary text-sm text-red-600 hover:bg-red-50 border-red-200"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </template>
+        <div
+          x-show="pendingDetails.length === 0"
+          class="col-span-full text-center py-12 text-dark-500"
+        >
+          <svg
+            class="w-12 h-12 mx-auto text-dark-300 mb-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <p>No hay pedidos pendientes</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <h3 class="font-semibold text-dark-900">Órdenes en Cocina</h3>
+      <div class="card max-h-[600px] overflow-y-auto scrollbar-thin divide-y divide-dark-100">
+        <template x-for="order in kitchenOrders" :key="order.id">
+          <div class="p-4 hover:bg-dark-50">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono font-medium text-dark-900"
+                >#<span x-text="order.id"></span
+              ></span>
+              <span
+                class="badge"
+                :class="$store.formatters.orderStatusClass(order.status)"
+                x-text="$store.formatters.orderStatus(order.status)"
+              ></span>
+            </div>
+            <template x-if="order.tableName">
+              <p
+                class="text-sm text-primary-700 bg-primary-50 px-2 py-0.5 rounded inline-block mb-2"
+                x-text="'Mesa ' + order.tableName"
+              ></p>
+            </template>
+            <div class="flex flex-wrap gap-1">
+              <template x-for="detail in order.details" :key="detail.id">
+                <span
+                  class="badge badge-gray"
+                  x-text="detail.amount + 'x ' + detail.product.name"
+                ></span>
+              </template>
+            </div>
+          </div>
+        </template>
+        <div x-show="kitchenOrders.length === 0" class="p-8 text-center text-dark-500">
+          No hay órdenes en cocina
+        </div>
+      </div>
+
+      <div class="card p-4">
+        <h4 class="font-medium text-dark-900 mb-3">Estadísticas de Preparación</h4>
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div class="p-3 bg-primary-50 rounded-lg">
+            <p class="text-2xl font-bold text-primary-700" x-text="prepStats.avgPrepTime || 0"></p>
+            <p class="text-xs text-primary-600">Promedio (min)</p>
+          </div>
+          <div class="p-3 bg-green-50 rounded-lg">
+            <p class="text-2xl font-bold text-green-700" x-text="prepStats.minPrepTime || 0"></p>
+            <p class="text-xs text-green-600">Mínimo (min)</p>
+          </div>
+          <div class="p-3 bg-red-50 rounded-lg">
+            <p class="text-2xl font-bold text-red-700" x-text="prepStats.maxPrepTime || 0"></p>
+            <p class="text-xs text-red-600">Máximo (min)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
