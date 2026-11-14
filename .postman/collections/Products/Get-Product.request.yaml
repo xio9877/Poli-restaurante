@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Product by ID
+order: 1040
+url: '{{baseUrl}}/products/{{productId}}'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

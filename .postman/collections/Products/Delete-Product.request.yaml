@@ -1,0 +1,8 @@
+$kind: http-request
+name: Delete Product
+order: 1070
+url: '{{baseUrl}}/products/{{productId}}'
+method: DELETE
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
