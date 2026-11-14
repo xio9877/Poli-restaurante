@@ -1,5 +1,4 @@
 import { IsInt, Min, IsOptional, IsString, IsNumber, IsIn } from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PartialType } from '@nestjs/swagger';
 
@@ -26,7 +25,7 @@ export class CreateProductDto {
   @ApiPropertyOptional({ enum: ['available', 'unavailable'], example: 'available' })
   @IsOptional()
   @IsIn(['available', 'unavailable'])
-  status?: string;
+  status?: 'available' | 'unavailable';
 }
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}
@@ -34,5 +33,5 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {}
 export class UpdateProductStatusDto {
   @ApiProperty({ enum: ['available', 'unavailable'], example: 'unavailable' })
   @IsIn(['available', 'unavailable'])
-  status: string;
+  status: 'available' | 'unavailable';
 }

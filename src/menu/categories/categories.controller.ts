@@ -27,28 +27,7 @@ export class CategoriesController {
 
   @Get()
   async findAll(@Query() query: CategoryQueryDto): Promise<PaginatedResultDto<any>> {
-    const { page = 1, limit = 20, search, orderBy = 'createdAt', orderDir = 'desc' } = query;
-    const skip = (page - 1) * limit;
-
-    const where: any = {};
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    const [data, total] = await Promise.all([
-      this.categoriesService['client'].category.findMany({
-        where,
-        orderBy: { [orderBy]: orderDir },
-        skip,
-        take: limit,
-      }),
-      this.categoriesService['client'].category.count({ where }),
-    ]);
-
-    return new PaginatedResultDto(data, total, page, limit);
+    return this.categoriesService.findAll(query);
   }
 
   @Get(':id')

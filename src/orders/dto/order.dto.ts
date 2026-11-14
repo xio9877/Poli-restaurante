@@ -12,6 +12,8 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export type OrderStatus = 'open' | 'in_preparation' | 'ready' | 'served' | 'canceled';
+
 export class CreateOrderDetailDto {
   @ApiProperty({ example: 1 })
   @IsInt()
@@ -55,7 +57,7 @@ export class UpdateOrderStatusDto {
     example: 'in_preparation',
   })
   @IsIn(['open', 'in_preparation', 'ready', 'served', 'canceled'])
-  status: string;
+  status: OrderStatus;
 
   @ApiPropertyOptional()
   @IsOptional()

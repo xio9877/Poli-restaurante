@@ -94,6 +94,16 @@ test.describe('Poli Restaurante - Login and Navigation', () => {
     await expect(page.locator('h2:has-text("Gestión de Menú")')).toBeVisible();
   });
 
+  test('should open the category form from the menu page', async ({ page }) => {
+    await login(page);
+    await page.click('text=Menú');
+    await page.waitForURL('**/menu');
+    await page.click('button:has-text("+ Categoría")');
+
+    await expect(page.locator('h3:has-text("Nueva Categoría")')).toBeVisible();
+    await expect(page.locator('input[placeholder="Ej: Platos Fuertes"]')).toBeVisible();
+  });
+
   test('should navigate to Reports page', async ({ page }) => {
     await login(page);
 
