@@ -1,0 +1,8 @@
+$kind: http-request
+name: List Invoices by Status
+order: 1040
+url: '{{baseUrl}}/invoices/status/issued'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Invoice with Payment
+order: 1050
+url: '{{baseUrl}}/invoices/{{invoiceId}}/with-payment'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

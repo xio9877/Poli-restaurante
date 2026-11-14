@@ -1,0 +1,8 @@
+$kind: http-request
+name: Delete Invoice
+order: 1070
+url: '{{baseUrl}}/invoices/{{invoiceId}}'
+method: DELETE
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

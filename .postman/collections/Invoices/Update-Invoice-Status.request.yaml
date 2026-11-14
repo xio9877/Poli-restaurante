@@ -1,0 +1,16 @@
+$kind: http-request
+name: Update Invoice Status
+order: 1060
+url: '{{baseUrl}}/invoices/{{invoiceId}}/status'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "issued"
+    }
