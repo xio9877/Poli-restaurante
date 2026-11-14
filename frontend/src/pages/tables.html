@@ -1,0 +1,164 @@
+<div class="space-y-6" x-data="tables()">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <h2 class="text-2xl font-bold text-dark-900">Gestión de Mesas</h2>
+    <button @click="openModal()" class="btn-primary">+ Nueva Mesa</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="flex flex-wrap gap-2">
+        <button
+          @click="filter = 'all'"
+          class="px-3 py-1 rounded-full text-sm font-medium"
+          :class="filter === 'all' ? 'bg-primary-600 text-white' : 'bg-dark-100 text-dark-700'"
+        >
+          Todas
+        </button>
+        <button
+          @click="filter = 'available'"
+          class="px-3 py-1 rounded-full text-sm font-medium"
+          :class="filter === 'available' ? 'bg-green-600 text-white' : 'bg-dark-100 text-dark-700'"
+        >
+          Libres
+        </button>
+        <button
+          @click="filter = 'occupied'"
+          class="px-3 py-1 rounded-full text-sm font-medium"
+          :class="filter === 'occupied' ? 'bg-amber-600 text-white' : 'bg-dark-100 text-dark-700'"
+        >
+          Ocupadas
+        </button>
+        <button
+          @click="filter = 'unavailable'"
+          class="px-3 py-1 rounded-full text-sm font-medium"
+          :class="filter === 'unavailable' ? 'bg-dark-600 text-white' : 'bg-dark-100 text-dark-700'"
+        >
+          No Disp.
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+      >
+        <template x-for="table in filteredTables" :key="table.id">
+          <div class="card card-hover p-4 relative group">
+            <div class="flex items-start justify-between mb-3">
+              <span class="font-bold text-lg text-dark-900" x-text="table.name"></span>
+              <span
+                class="badge"
+                :class="$store.formatters.tableStateClass(table.state)"
+                x-text="$store.formatters.tableState(table.state)"
+              ></span>
+            </div>
+            <p
+              class="text-sm text-dark-500 mb-3"
+              x-text="table.description || 'Sin descripción'"
+            ></p>
+
+            <template x-if="table.state === 'unavailable' && table.currentOrder">
+              <div class="p-3 bg-amber-50 rounded-lg mb-3 border border-amber-200">
+                <p class="text-sm font-medium text-amber-900">Orden Activa</p>
+                <p class="text-sm text-amber-700">
+                  #<span x-text="table.currentOrder.id"></span> -
+                  <span x-text="$store.formatters.currency(table.currentOrder.total)"></span>
+                </p>
+                <p
+                  class="text-xs text-amber-600"
+                  x-text="table.currentOrder.dineInOrder ? 'Mesa: ' + table.currentOrder.dineInOrder.guestCount + ' personas' : ''"
+                ></p>
+              </div>
+            </template>
+
+            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button @click="openModal(table)" class="flex-1 btn-secondary text-sm py-1.5">
+                Editar
+              </button>
+              <template x-if="table.state === 'available'">
+                <button @click="occupyTable(table)" class="flex-1 btn-primary text-sm py-1.5">
+                  Ocupar
+                </button>
+              </template>
+              <template x-if="table.state === 'unavailable' && table.currentOrder">
+                <button @click="releaseTable(table)" class="flex-1 btn-secondary text-sm py-1.5">
+                  Liberar
+                </button>
+              </template>
+              <template x-if="table.state !== 'available' && !table.currentOrder">
+                <button @click="toggleAvailable(table)" class="flex-1 btn-secondary text-sm py-1.5">
+                  Disponible
+                </button>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div
+    x-show="showModal"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-50 overflow-y-auto"
+    @click.self="closeModal()"
+  >
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative w-full max-w-md bg-white rounded-xl shadow-xl">
+        <div class="p-5 border-b border-dark-200 flex items-center justify-between">
+          <h3
+            class="text-lg font-semibold text-dark-900"
+            x-text="editing ? 'Editar Mesa' : 'Nueva Mesa'"
+          ></h3>
+          <button @click="closeModal()" class="text-dark-400 hover:text-dark-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="save()" class="p-5 space-y-4">
+          <input type="hidden" x-model="form.id" />
+          <div>
+            <label class="label">Nombre *</label>
+            <input
+              type="text"
+              x-model="form.name"
+              required
+              class="input"
+              placeholder="Ej: Mesa 1, Terraza A"
+            />
+          </div>
+          <div>
+            <label class="label">Descripción</label>
+            <textarea
+              x-model="form.description"
+              rows="2"
+              class="input"
+              placeholder="Ubicación, características..."
+            ></textarea>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button type="button" @click="closeModal()" class="flex-1 btn-secondary">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="flex-1 btn-primary"
+              x-text="editing ? 'Actualizar' : 'Crear'"
+            ></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
