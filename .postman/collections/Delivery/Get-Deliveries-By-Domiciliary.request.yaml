@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Deliveries by Domiciliary
+order: 1040
+url: '{{baseUrl}}/delivery/domiciliary/{{userId}}'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

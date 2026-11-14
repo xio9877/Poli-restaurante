@@ -1,0 +1,26 @@
+$kind: http-request
+name: Create Delivery Order With Details
+order: 1010
+url: '{{baseUrl}}/delivery/orders'
+method: POST
+headers:
+  - key: Authorization
+    value: '******'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "customerId": "{{customerId}}",
+      "addressId": {{addressId}},
+      "domiciliaryId": "{{userId}}",
+      "deliveryFee": 5000,
+      "notes": "Entregar en portería",
+      "details": [
+        {
+          "productId": {{productId}},
+          "amount": 2
+        }
+      ]
+    }

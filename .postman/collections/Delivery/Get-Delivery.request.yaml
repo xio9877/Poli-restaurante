@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Delivery by Order ID
+order: 1020
+url: '{{baseUrl}}/delivery/{{orderId}}'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

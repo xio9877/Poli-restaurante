@@ -1,0 +1,20 @@
+$kind: http-request
+name: Create Delivery Order
+order: 1000
+url: '{{baseUrl}}/delivery'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "orderId": {{orderId}},
+      "customerId": "{{customerId}}",
+      "addressId": {{addressId}},
+      "domiciliaryId": "{{userId}}",
+      "deliveryFee": 5000
+    }

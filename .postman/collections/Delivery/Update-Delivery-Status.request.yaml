@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Delivery Status
+order: 1050
+url: '{{baseUrl}}/delivery/{{orderId}}/status'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "assigned",
+      "notes": "Asignado a domiciliario"
+    }

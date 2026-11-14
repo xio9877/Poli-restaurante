@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Deliveries by Status
+order: 1030
+url: '{{baseUrl}}/delivery/status/pending'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
