@@ -1,0 +1,8 @@
+$kind: http-request
+name: List Open Orders
+order: 3000
+url: '{{baseUrl}}/orders/open'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
