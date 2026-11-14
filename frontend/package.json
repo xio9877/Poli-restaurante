@@ -1,0 +1,23 @@
+{
+  "name": "poli-restaurante-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "alpinejs": "^3.14.1",
+    "axios": "^1.7.2",
+    "lucide": "^0.408.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "autoprefixer": "^10.4.19",
+    "playwright": "^1.65.0",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6",
+    "vite": "^5.3.4"
+  }
+}
