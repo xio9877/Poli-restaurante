@@ -1,0 +1,17 @@
+$kind: http-request
+name: Update Dine-In
+order: 4000
+url: '{{baseUrl}}/dine-in/{{orderId}}'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tableId": 3,
+      "guestCount": 2
+    }

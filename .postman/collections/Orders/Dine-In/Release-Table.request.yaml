@@ -1,0 +1,8 @@
+$kind: http-request
+name: Release Table
+order: 5000
+url: '{{baseUrl}}/dine-in/{{orderId}}'
+method: DELETE
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

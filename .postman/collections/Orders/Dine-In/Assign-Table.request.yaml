@@ -1,0 +1,18 @@
+$kind: http-request
+name: Assign Table
+order: 1000
+url: '{{baseUrl}}/dine-in'
+method: POST
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "orderId": 1,
+      "tableId": 5,
+      "guestCount": 4
+    }
