@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { PaginatedResultDto } from '../../common/dto/pagination.dto';
 import { BaseQueryDto } from '../../common/dto/query.dto';
+import { DeliveryStatus } from './dto/create-delivery-order.dto';
 
 @Injectable()
 export class DeliveryService {
@@ -74,7 +75,7 @@ export class DeliveryService {
       const [order, customer, address, domiciliary] = await Promise.all([
         tx.order.findUnique({
           where: { id: data.orderId },
-          include: { deliveryOrder: true, dineInOrder: true },
+          include: { deliveryOrder: true, dineInOrder: true, invoice: true },
         }),
         tx.customer.findUnique({ where: { id: data.customerId } }),
         tx.customerAddress.findFirst({
@@ -85,21 +86,37 @@ export class DeliveryService {
       if (!order) throw new NotFoundException('Order not found');
       if (order.deliveryOrder || order.dineInOrder)
         throw new ConflictException('Order already has a service type');
+      if (order.status === 'canceled') {
+        throw new BadRequestException('A canceled order cannot be assigned for delivery');
+      }
+      const deliveryFeeCents = Math.round((data.deliveryFee ?? 0) * 100);
+      const deliveryFee = deliveryFeeCents / 100;
+      if (deliveryFee && order.invoice) {
+        throw new ConflictException('Delivery fee cannot change after an invoice is created');
+      }
       if (!customer) throw new NotFoundException('Customer not found');
       if (!address) throw new BadRequestException('The address does not belong to this customer');
       if (!domiciliary || domiciliary.role !== 'domiciliary')
         throw new BadRequestException('Select a valid delivery worker');
 
-      return tx.deliveryOrder.create({
+      const delivery = await tx.deliveryOrder.create({
         data: {
           orderId: data.orderId,
           customerId: customer.id,
           addressId: address.id,
           domiciliaryId: domiciliary.id,
-          deliveryFee: data.deliveryFee,
+          deliveryFee,
           status: 'pending',
         },
       });
+      if (deliveryFee) {
+        const orderTotalCents = Math.round(Number(order.total) * 100);
+        await tx.order.update({
+          where: { id: order.id },
+          data: { total: (orderTotalCents + deliveryFeeCents) / 100 },
+        });
+      }
+      return delivery;
     });
   }
 
@@ -194,8 +211,8 @@ export class DeliveryService {
     });
   }
 
-  async updateStatus(orderId: number, status: string, notes?: string) {
-    const validTransitions: Record<string, string[]> = {
+  async updateStatus(orderId: number, status: DeliveryStatus, notes?: string) {
+    const validTransitions: Record<DeliveryStatus, DeliveryStatus[]> = {
       pending: ['assigned', 'canceled'],
       assigned: ['picked_up', 'canceled'],
       picked_up: ['delivered', 'canceled'],
@@ -210,21 +227,48 @@ export class DeliveryService {
         throw new ConflictException(`Cannot move delivery from ${delivery.status} to ${status}`);
       }
 
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { invoice: { include: { payment: true } } },
+      });
+      if (!order) throw new NotFoundException('Order not found');
+      const canceled = status === 'canceled';
+      if (order.status === 'canceled' && !canceled) {
+        throw new ConflictException('A canceled order cannot resume delivery');
+      }
+      if (canceled && order.status === 'served') {
+        throw new ConflictException('A completed order cannot be canceled');
+      }
+      if (canceled && order.invoice?.payment?.status === 'completed') {
+        throw new ConflictException('A paid order cannot be canceled');
+      }
+      const nextOrderStatus = canceled
+        ? 'canceled'
+        : status === 'delivered'
+          ? 'served'
+          : order.status;
       const updated = await tx.deliveryOrder.update({
         where: { orderId },
         data: {
-          status: status as any,
+          status,
           updatedAt: new Date(),
           ...(status === 'delivered' && { deliveredAt: new Date() }),
         },
       });
-      const order = await tx.order.findUnique({ where: { id: orderId } });
-      if (!order) throw new NotFoundException('Order not found');
-      const canceled = status === 'canceled';
-      if (canceled) {
+      if (nextOrderStatus !== order.status) {
         await tx.order.update({
           where: { id: orderId },
-          data: { status: 'canceled', canceledAt: new Date() },
+          data: {
+            status: nextOrderStatus,
+            ...(canceled && { canceledAt: new Date() }),
+            ...(status === 'delivered' && { completedAt: new Date() }),
+          },
+        });
+      }
+      if (canceled && order.invoice && order.invoice.status !== 'canceled') {
+        await tx.invoice.update({
+          where: { id: order.invoice.id },
+          data: { status: 'canceled' },
         });
       }
       await tx.orderStateHistory.create({
@@ -233,7 +277,7 @@ export class DeliveryService {
           userId: delivery.domiciliaryId,
           notes: `Domicilio ${delivery.status} → ${status}${notes ? `: ${notes}` : ''}`,
           oldState: order.status,
-          newState: canceled ? 'canceled' : order.status,
+          newState: nextOrderStatus,
         },
       });
       return updated;
@@ -249,24 +293,51 @@ export class DeliveryService {
       deliveryFee: number;
     }>
   ) {
-    const delivery = await this.client.deliveryOrder.findUnique({ where: { orderId } });
-    if (!delivery) throw new NotFoundException('Delivery order not found');
-    const customerId = data.customerId ?? delivery.customerId;
-    const addressId = data.addressId ?? delivery.addressId;
-    if (data.customerId || data.addressId) {
-      const address = await this.client.customerAddress.findFirst({
-        where: { id: addressId, customerId },
+    return this.client.$transaction(async (tx) => {
+      const delivery = await tx.deliveryOrder.findUnique({
+        where: { orderId },
+        include: { order: { include: { invoice: true } } },
       });
-      if (!address) throw new BadRequestException('The address does not belong to this customer');
-    }
-    if (data.domiciliaryId) {
-      const user = await this.client.user.findUnique({ where: { id: data.domiciliaryId } });
-      if (!user || user.role !== 'domiciliary')
-        throw new BadRequestException('Select a valid delivery worker');
-    }
-    return this.client.deliveryOrder.update({
-      where: { orderId },
-      data: { ...data, updatedAt: new Date() },
+      if (!delivery) throw new NotFoundException('Delivery order not found');
+      const customerId = data.customerId ?? delivery.customerId;
+      const addressId = data.addressId ?? delivery.addressId;
+      if (data.customerId || data.addressId) {
+        const address = await tx.customerAddress.findFirst({
+          where: { id: addressId, customerId },
+        });
+        if (!address) throw new BadRequestException('The address does not belong to this customer');
+      }
+      if (data.domiciliaryId) {
+        const user = await tx.user.findUnique({ where: { id: data.domiciliaryId } });
+        if (!user || user.role !== 'domiciliary')
+          throw new BadRequestException('Select a valid delivery worker');
+      }
+
+      let deliveryFee: number | undefined;
+      if (data.deliveryFee !== undefined) {
+        const deliveryFeeCents = Math.round(data.deliveryFee * 100);
+        const previousFeeCents = Math.round(Number(delivery.deliveryFee ?? 0) * 100);
+        deliveryFee = deliveryFeeCents / 100;
+        if (deliveryFeeCents !== previousFeeCents) {
+          if (delivery.order.invoice) {
+            throw new ConflictException('Delivery fee cannot change after an invoice is created');
+          }
+          const orderTotalCents = Math.round(Number(delivery.order.total) * 100);
+          await tx.order.update({
+            where: { id: orderId },
+            data: { total: (orderTotalCents + deliveryFeeCents - previousFeeCents) / 100 },
+          });
+        }
+      }
+
+      return tx.deliveryOrder.update({
+        where: { orderId },
+        data: {
+          ...data,
+          ...(deliveryFee !== undefined && { deliveryFee }),
+          updatedAt: new Date(),
+        },
+      });
     });
   }
 

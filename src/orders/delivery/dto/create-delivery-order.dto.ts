@@ -13,6 +13,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+export type DeliveryStatus = 'pending' | 'assigned' | 'picked_up' | 'delivered' | 'canceled';
+
 class DeliveryOrderDetailDto {
   @IsInt()
   @Min(1)
@@ -84,7 +86,7 @@ export class CreateDeliveryDto {
 
 export class UpdateDeliveryStatusDto {
   @IsIn(['pending', 'assigned', 'picked_up', 'delivered', 'canceled'])
-  status: string;
+  status: DeliveryStatus;
 
   @IsOptional()
   @IsString()
