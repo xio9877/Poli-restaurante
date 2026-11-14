@@ -9,6 +9,8 @@ build/
 
 # Environment
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
@@ -26,6 +28,8 @@ lerna-debug.log*
 # Testing
 coverage/
 .nyc_output/
+frontend/playwright-report/
+frontend/test-results/
 
 # IDE
 .vscode/*
@@ -40,6 +44,13 @@ Thumbs.db
 
 # Prisma
 .prisma/
+generated/
+certs/
+*.pem
+*.crt
+*.cer
+*.key
+*.p12
 
 # Misc
 *.tsbuildinfo
