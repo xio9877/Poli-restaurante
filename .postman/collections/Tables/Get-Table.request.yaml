@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Table by ID
+order: 1030
+url: '{{baseUrl}}/tables/{{tableId}}'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

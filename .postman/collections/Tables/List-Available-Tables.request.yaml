@@ -1,0 +1,8 @@
+$kind: http-request
+name: List Available Tables
+order: 1020
+url: '{{baseUrl}}/tables/available'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

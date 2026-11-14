@@ -1,0 +1,8 @@
+$kind: http-request
+name: List Tables
+order: 1010
+url: '{{baseUrl}}/tables?page=1&limit=20'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

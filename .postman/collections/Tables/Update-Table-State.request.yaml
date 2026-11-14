@@ -1,0 +1,16 @@
+$kind: http-request
+name: Update Table State
+order: 1050
+url: '{{baseUrl}}/tables/{{tableId}}/state'
+method: PATCH
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "state": "unavailable"
+    }

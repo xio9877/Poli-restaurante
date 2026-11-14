@@ -1,0 +1,8 @@
+$kind: http-request
+name: Delete Table
+order: 1060
+url: '{{baseUrl}}/tables/{{tableId}}'
+method: DELETE
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
