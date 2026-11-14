@@ -1,0 +1,147 @@
+<div class="space-y-6" x-data="billing()">
+  <div>
+    <h2 class="text-2xl font-bold text-dark-900">Facturación y pagos</h2>
+    <p class="mt-1 text-sm text-dark-500">
+      Servir una orden no la marca como pagada. Emite la factura y registra el pago por separado.
+    </p>
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h3 class="font-semibold text-dark-900">Órdenes y estado de cuenta</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-dark-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-dark-600">Orden</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-dark-600">
+              Tipo / cliente
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-dark-600">
+              Estado de orden
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-dark-600">
+              Total con IVA
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-dark-600">
+              Factura / pago
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-dark-600">
+              Acción
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-dark-100">
+          <template x-for="order in orders" :key="order.id">
+            <tr>
+              <td class="px-4 py-3 font-mono" x-text="'#' + order.id"></td>
+              <td class="px-4 py-3">
+                <span
+                  x-text="order.deliveryOrder ? 'Domicilio · ' + (order.deliveryOrder.customer?.name || '') : order.dineInOrder ? 'Mesa · ' + (order.dineInOrder.table?.name || '') : 'Orden'"
+                ></span>
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  class="badge"
+                  :class="$store.formatters.orderStatusClass(order.status)"
+                  x-text="$store.formatters.orderStatus(order.status)"
+                ></span>
+              </td>
+              <td
+                class="px-4 py-3 text-right font-semibold"
+                x-text="$store.formatters.currency(order.total)"
+              ></td>
+              <td class="px-4 py-3">
+                <template x-if="order.invoice">
+                  <div>
+                    <span
+                      class="badge badge-info"
+                      x-text="'Factura ' + order.invoice.status"
+                    ></span>
+                    <span
+                      class="badge"
+                      :class="order.invoice.payment?.status === 'completed' ? 'badge-success' : 'badge-warning'"
+                      x-text="order.invoice.payment?.status === 'completed' ? 'Pagada' : order.invoice.payment ? 'Pago pendiente' : 'Sin pago'"
+                    ></span>
+                    <p
+                      x-show="order.invoice.payment"
+                      class="mt-1 text-xs text-dark-500"
+                      x-text="paymentLabel(order.invoice.payment)"
+                    ></p>
+                  </div>
+                </template>
+                <span x-show="!order.invoice" class="text-sm text-dark-500">Sin factura</span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button
+                  x-show="!order.invoice"
+                  @click="issueInvoice(order)"
+                  class="btn-primary text-sm"
+                >
+                  Emitir factura
+                </button>
+                <button
+                  x-show="order.invoice?.status === 'issued' && order.invoice.payment?.status !== 'completed'"
+                  @click="openPayment(order)"
+                  class="btn-secondary text-sm"
+                >
+                  Registrar pago
+                </button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="!loading && orders.length === 0">
+            <td colspan="6" class="p-8 text-center text-dark-500">No hay órdenes para facturar.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div
+    x-show="showPaymentModal"
+    class="fixed inset-0 z-50 overflow-y-auto bg-black/40"
+    @click.self="closePayment()"
+  >
+    <div class="flex min-h-full items-center justify-center p-4">
+      <form
+        @submit.prevent="processPayment()"
+        class="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl"
+      >
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold">Registrar pago</h3>
+          <button type="button" @click="closePayment()" class="btn-ghost">Cerrar</button>
+        </div>
+        <p class="text-sm text-dark-600">
+          Factura #<span x-text="selectedInvoice?.id"></span> · Total
+          <strong x-text="$store.formatters.currency(selectedInvoice?.total)"></strong>
+        </p>
+        <div>
+          <label class="label">Medio de pago</label>
+          <select x-model="paymentForm.method" class="input" required>
+            <option value="cash">Efectivo</option>
+            <option value="debit_card">Tarjeta débito</option>
+            <option value="credit_card">Tarjeta crédito</option>
+            <option value="transfer">Transferencia</option>
+            <option value="other">Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="label">Notas / referencia (opcional)</label>
+          <input x-model="paymentForm.notes" class="input" />
+        </div>
+        <p class="text-xs text-dark-500">
+          Este registro confirma un pago recibido en el establecimiento; no procesa cargos en una
+          pasarela bancaria.
+        </p>
+        <div class="flex justify-end gap-2">
+          <button type="button" @click="closePayment()" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary" :disabled="saving">
+            Confirmar pago recibido
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
