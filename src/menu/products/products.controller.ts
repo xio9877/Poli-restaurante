@@ -28,38 +28,7 @@ export class ProductsController {
 
   @Get()
   async findAll(@Query() query: ProductQueryDto): Promise<PaginatedResultDto<any>> {
-    const {
-      page = 1,
-      limit = 20,
-      search,
-      status,
-      categoryId,
-      orderBy = 'createdAt',
-      orderDir = 'desc',
-    } = query;
-    const skip = (page - 1) * limit;
-
-    const where: any = {};
-    if (status) where.status = status;
-    if (categoryId) where.categoryId = categoryId;
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    const [data, total] = await Promise.all([
-      this.productsService['client'].product.findMany({
-        where,
-        orderBy: { [orderBy]: orderDir },
-        skip,
-        take: limit,
-      }),
-      this.productsService['client'].product.count({ where }),
-    ]);
-
-    return new PaginatedResultDto(data, total, page, limit);
+    return this.productsService.findAll(query);
   }
 
   @Get('available')
