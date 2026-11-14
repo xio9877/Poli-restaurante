@@ -7,6 +7,9 @@ import {
   IsOptional,
   IsString,
   Min,
+  IsIn,
+  MinLength,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -26,6 +29,7 @@ class DeliveryOrderDetailDto {
 
 export class CreateDeliveryOrderDto {
   @IsString()
+  @MinLength(1)
   customerId: string;
 
   @IsInt()
@@ -33,6 +37,7 @@ export class CreateDeliveryOrderDto {
   addressId: number;
 
   @IsString()
+  @MinLength(1)
   domiciliaryId: string;
 
   @IsOptional()
@@ -49,4 +54,64 @@ export class CreateDeliveryOrderDto {
   @ValidateNested({ each: true })
   @Type(() => DeliveryOrderDetailDto)
   details: DeliveryOrderDetailDto[];
+}
+
+export class CreateDeliveryDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  orderId: number;
+
+  @IsString()
+  @MinLength(1)
+  customerId: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  addressId: number;
+
+  @IsString()
+  @MinLength(1)
+  domiciliaryId: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  deliveryFee?: number;
+}
+
+export class UpdateDeliveryStatusDto {
+  @IsIn(['pending', 'assigned', 'picked_up', 'delivered', 'canceled'])
+  status: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  notes?: string;
+}
+
+export class UpdateDeliveryDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  customerId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  addressId?: number;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  domiciliaryId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  deliveryFee?: number;
 }

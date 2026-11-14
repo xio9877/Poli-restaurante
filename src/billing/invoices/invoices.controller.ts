@@ -12,9 +12,8 @@ import {
 } from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import { SupabaseAuthGuard } from '@/auth/supabase-auth.guard';
-import { PaginatedResultDto } from '@/common/dto/pagination.dto';
 import { CurrentUserId } from '@/common/decorators/current-user.decorator';
-import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { CreateInvoiceDto, UpdateInvoiceStatusDto } from './dto/create-invoice.dto';
 
 @Controller('invoices')
 @UseGuards(SupabaseAuthGuard)
@@ -26,10 +25,14 @@ export class InvoicesController {
     return this.invoicesService.create(dto.orderId, cashierId);
   }
 
+  @Post('issue')
+  async issue(@Body() dto: CreateInvoiceDto, @CurrentUserId() cashierId: string) {
+    return this.invoicesService.issue(dto.orderId, cashierId);
+  }
+
   @Get()
-  async findAll(): Promise<PaginatedResultDto<any>> {
-    const data = await this.invoicesService.findAll();
-    return new PaginatedResultDto(data, data.length, 1, data.length);
+  async findAll() {
+    return this.invoicesService.findAll();
   }
 
   @Get(':id')
@@ -43,9 +46,8 @@ export class InvoicesController {
   }
 
   @Get('status/:status')
-  async findByStatus(@Param('status') status: string): Promise<PaginatedResultDto<any>> {
-    const data = await this.invoicesService.findByStatus(status);
-    return new PaginatedResultDto(data, data.length, 1, data.length);
+  async findByStatus(@Param('status') status: string) {
+    return this.invoicesService.findByStatus(status);
   }
 
   @Get(':id/with-payment')
@@ -54,8 +56,8 @@ export class InvoicesController {
   }
 
   @Patch(':id/status')
-  async updateStatus(@Param('id', ParseIntPipe) id: number, @Body('status') status: string) {
-    return this.invoicesService.updateStatus(id, status);
+  async updateStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateInvoiceStatusDto) {
+    return this.invoicesService.updateStatus(id, dto.status);
   }
 
   @Delete(':id')

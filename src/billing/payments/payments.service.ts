@@ -43,66 +43,78 @@ export class PaymentsService {
   }
 
   async updateStatus(invoiceId: number, status: string, notes?: string) {
-    if (!['pending', 'completed', 'failed', 'refunded'].includes(status)) {
+    if (!['pending', 'failed'].includes(status)) {
       throw new BadRequestException('Invalid payment status');
     }
 
-    const invoice = await this.client.invoice.findUnique({ where: { id: invoiceId } });
-    if (!invoice) throw new NotFoundException('Invoice not found');
-    if (status === 'completed' && invoice.status !== 'issued') {
-      throw new BadRequestException('Invoice must be issued before payment');
-    }
-
-    const updateData: any = { status: status as any };
-    if (status === 'completed') {
-      const payment = await this.client.payment.findUnique({ where: { invoiceId } });
-      if (
-        !payment ||
-        Math.round(Number(payment.amount) * 100) !== Math.round(Number(invoice.total) * 100)
-      ) {
-        throw new BadRequestException('Payment amount must match the invoice total');
+    return this.client.$transaction(async (tx) => {
+      const invoice = await tx.invoice.findUnique({ where: { id: invoiceId } });
+      if (!invoice) throw new NotFoundException('Invoice not found');
+      const payment = await tx.payment.findUnique({ where: { invoiceId } });
+      if (!payment) throw new NotFoundException('Payment not found');
+      if (payment.status === 'completed' || payment.status === 'refunded') {
+        throw new BadRequestException('Completed or refunded payments cannot be changed');
       }
-      updateData.paidAt = new Date();
-    }
-    if (notes) updateData.notes = notes;
-    return this.client.payment.update({ where: { invoiceId }, data: updateData });
+      return tx.payment.update({
+        where: { invoiceId },
+        data: {
+          status: status as any,
+          ...(status === 'completed' && { paidAt: new Date() }),
+          ...(notes && { notes }),
+        },
+      });
+    });
   }
 
   async processPayment(
     invoiceId: number,
     data: { method: string; amount: number; notes?: string }
   ) {
-    const invoice = await this.client.invoice.findUnique({ where: { id: invoiceId } });
-    if (!invoice) throw new NotFoundException('Invoice not found');
-    if (invoice.status !== 'issued')
-      throw new BadRequestException('Invoice must be issued before payment');
-    if (Math.round(Number(data.amount) * 100) !== Math.round(Number(invoice.total) * 100)) {
-      throw new BadRequestException('Payment amount must match the invoice total');
-    }
+    try {
+      return await this.client.$transaction(async (tx) => {
+        const invoice = await tx.invoice.findUnique({ where: { id: invoiceId } });
+        if (!invoice) throw new NotFoundException('Invoice not found');
+        if (invoice.status !== 'issued')
+          throw new BadRequestException('Invoice must be issued before payment');
+        if (Math.round(Number(data.amount) * 100) !== Math.round(Number(invoice.total) * 100)) {
+          throw new BadRequestException('Payment amount must match the invoice total');
+        }
+        const existing = await tx.payment.findUnique({ where: { invoiceId } });
+        if (existing?.status === 'completed') {
+          throw new BadRequestException('Invoice has already been paid');
+        }
+        if (existing?.status === 'refunded') {
+          throw new BadRequestException('A refunded payment cannot be processed again');
+        }
 
-    return this.client.$transaction(async (tx) => {
-      const existing = await tx.payment.findUnique({ where: { invoiceId } });
-      if (existing?.status === 'completed') {
+        const paymentData = {
+          amount: data.amount,
+          method: data.method as any,
+          status: 'completed' as const,
+          notes: data.notes,
+          paidAt: new Date(),
+        };
+        if (!existing) {
+          return tx.payment.create({ data: { invoiceId, ...paymentData } });
+        }
+        const updated = await tx.payment.updateMany({
+          where: { invoiceId, status: { in: ['pending', 'failed'] } },
+          data: paymentData,
+        });
+        if (!updated.count) throw new BadRequestException('Invoice has already been paid');
+        return tx.payment.findUniqueOrThrow({ where: { invoiceId } });
+      });
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new BadRequestException('Invoice has already been paid');
       }
-
-      const paymentData = {
-        amount: data.amount,
-        method: data.method as any,
-        status: 'completed' as const,
-        notes: data.notes,
-        paidAt: new Date(),
-      };
-      const payment = await tx.payment.upsert({
-        where: { invoiceId },
-        create: { invoiceId, ...paymentData },
-        update: paymentData,
-      });
-
-      await tx.invoice.update({ where: { id: invoiceId }, data: { status: 'issued' } });
-
-      return payment;
-    });
+      throw error;
+    }
   }
 
   async refund(invoiceId: number, notes?: string) {
@@ -115,7 +127,9 @@ export class PaymentsService {
       where: { invoiceId },
       data: {
         status: 'refunded',
-        notes: notes ? `${payment.notes || ''} | Refund: ${notes}` : payment.notes,
+        notes: notes
+          ? [payment.notes, `Refund: ${notes}`].filter(Boolean).join(' | ')
+          : payment.notes,
       },
     });
   }
